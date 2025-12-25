@@ -18,6 +18,7 @@ const roles = [
   { nama_role: 'Manager' },
   { nama_role: 'Kasir' },
   { nama_role: 'Barista' },
+  { nama_role: 'Pengadaan' },
 ];
 
 // Users (will be created with hashed passwords)
@@ -48,6 +49,13 @@ const users = [
     email: 'barista@cafemerahputih.com',
     password: 'barista123',
     role: 'Barista',
+    status: 'Aktif' as const,
+  },
+  {
+    username: 'Pengadaan User',
+    email: 'pengadaan@cafemerahputih.com',
+    password: 'pengadaan123',
+    role: 'Pengadaan',
     status: 'Aktif' as const,
   },
 ];
@@ -493,6 +501,7 @@ async function seed(): Promise<void> {
     console.log('  - manager@cafemerahputih.com / manager123 (Manager)');
     console.log('  - kasir@cafemerahputih.com / kasir123 (Kasir)');
     console.log('  - barista@cafemerahputih.com / barista123 (Barista)');
+    console.log('  - pengadaan@cafemerahputih.com / pengadaan123 (Pengadaan)');
     
   } catch (error) {
     console.error('\n========================================');

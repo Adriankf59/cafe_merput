@@ -1,94 +1,138 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
-import { BaristaOrder, BaristaOrderStatus, BaristaOrderItem, Material } from '@/lib/types';
-import { mockMaterials, mockProductMaterials } from '@/lib/data/mockData';
+import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
+import { BaristaOrder, BaristaOrderStatus, BaristaOrderItem } from '@/lib/types';
+import { getAuthToken } from '@/lib/services/auth';
 
 interface OrderContextType {
   orders: BaristaOrder[];
-  materials: Material[];
-  addOrder: (items: BaristaOrderItem[], cashierId: string, cashierName: string) => BaristaOrder;
-  updateOrderStatus: (orderId: string, status: BaristaOrderStatus) => void;
+  isLoading: boolean;
+  addOrder: (items: BaristaOrderItem[], cashierId: string, cashierName: string, transactionId?: string) => Promise<BaristaOrder>;
+  updateOrderStatus: (orderId: string, status: BaristaOrderStatus) => Promise<void>;
   getOrdersByStatus: (status: BaristaOrderStatus | 'all') => BaristaOrder[];
-  getMaterialById: (id: string) => Material | undefined;
-  refreshOrders: () => void;
+  refreshOrders: () => Promise<void>;
 }
 
 const OrderContext = createContext<OrderContextType | undefined>(undefined);
 
-// Generate order number
-function generateOrderNumber(): string {
-  const now = new Date();
-  const hours = now.getHours().toString().padStart(2, '0');
-  const minutes = now.getMinutes().toString().padStart(2, '0');
-  const random = Math.floor(Math.random() * 100).toString().padStart(2, '0');
-  return `${hours}${minutes}${random}`;
+// Helper to get auth headers
+function getHeaders(): HeadersInit {
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
+  const token = getAuthToken();
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
 }
 
-// Generate unique ID
-function generateId(): string {
-  return `ORD${Date.now()}${Math.random().toString(36).substr(2, 9)}`;
+// Map API response to BaristaOrder type
+function mapApiOrder(apiOrder: Record<string, unknown>): BaristaOrder {
+  const items = (apiOrder.items as Array<Record<string, unknown>> || []).map((item) => ({
+    productId: item.produk_id as string,
+    productName: item.nama_produk as string || '',
+    quantity: Number(item.jumlah),
+    notes: item.notes as string | undefined,
+  }));
+
+  return {
+    id: apiOrder.order_id as string,
+    orderNumber: apiOrder.order_number as string,
+    items,
+    status: apiOrder.status as BaristaOrderStatus,
+    createdAt: new Date(apiOrder.created_at as string),
+    cashierId: apiOrder.cashier_id as string,
+    cashierName: apiOrder.cashier_name as string || 'Unknown',
+  };
 }
 
 export function OrderProvider({ children }: { children: ReactNode }) {
   const [orders, setOrders] = useState<BaristaOrder[]>([]);
-  const [materials, setMaterials] = useState<Material[]>([...mockMaterials]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Reduce material stock based on product materials composition
-  const reduceMaterialStock = useCallback((items: BaristaOrderItem[]) => {
-    setMaterials((prevMaterials) => {
-      const updatedMaterials = [...prevMaterials];
-      
-      items.forEach((item) => {
-        // Find all materials needed for this product
-        const productMaterialsList = mockProductMaterials.filter(
-          (pm) => pm.productId === item.productId
-        );
-        
-        productMaterialsList.forEach((pm) => {
-          const materialIndex = updatedMaterials.findIndex((m) => m.id === pm.materialId);
-          if (materialIndex !== -1) {
-            const material = updatedMaterials[materialIndex];
-            const reduction = pm.quantity * item.quantity;
-            const newStock = Math.max(0, material.stock - reduction);
-            
-            updatedMaterials[materialIndex] = {
-              ...material,
-              stock: Math.round(newStock * 1000) / 1000, // Round to 3 decimal places
-              status: newStock <= material.minStock ? 'Stok Rendah' : 'Aman',
-            };
-          }
-        });
+  // Fetch orders from API
+  const fetchOrders = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch('/api/barista-orders?status=active', {
+        method: 'GET',
+        headers: getHeaders(),
       });
+
+      const data = await response.json();
       
-      return updatedMaterials;
-    });
+      if (response.ok && data.success) {
+        setOrders(data.data.map(mapApiOrder));
+      }
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
-  const addOrder = useCallback((items: BaristaOrderItem[], cashierId: string, cashierName: string): BaristaOrder => {
-    const newOrder: BaristaOrder = {
-      id: generateId(),
-      orderNumber: generateOrderNumber(),
-      items,
-      status: 'waiting',
-      createdAt: new Date(),
-      cashierId,
-      cashierName,
-    };
+  // Initial fetch
+  useEffect(() => {
+    fetchOrders();
+  }, [fetchOrders]);
 
+  // Poll for new orders every 5 seconds
+  useEffect(() => {
+    const interval = setInterval(fetchOrders, 5000);
+    return () => clearInterval(interval);
+  }, [fetchOrders]);
+
+  const addOrder = useCallback(async (
+    items: BaristaOrderItem[], 
+    cashierId: string, 
+    cashierName: string,
+    transactionId?: string
+  ): Promise<BaristaOrder> => {
+    const response = await fetch('/api/barista-orders', {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({
+        cashier_id: cashierId,
+        transaksi_id: transactionId,
+        items: items.map((item) => ({
+          produk_id: item.productId,
+          jumlah: item.quantity,
+          notes: item.notes,
+        })),
+      }),
+    });
+
+    const data = await response.json();
+    
+    if (!response.ok || !data.success) {
+      throw new Error(data.error || 'Failed to create order');
+    }
+
+    const newOrder = mapApiOrder(data.data);
     setOrders((prev) => [newOrder, ...prev]);
     
-    // Reduce material stock when order is created
-    reduceMaterialStock(items);
-
     return newOrder;
-  }, [reduceMaterialStock]);
+  }, []);
 
-  const updateOrderStatus = useCallback((orderId: string, status: BaristaOrderStatus) => {
+  const updateOrderStatus = useCallback(async (orderId: string, status: BaristaOrderStatus) => {
+    const response = await fetch(`/api/barista-orders/${orderId}`, {
+      method: 'PATCH',
+      headers: getHeaders(),
+      body: JSON.stringify({ status }),
+    });
+
+    const data = await response.json();
+    
+    if (!response.ok || !data.success) {
+      throw new Error(data.error || 'Failed to update order status');
+    }
+
+    // Update local state
     setOrders((prev) =>
       prev.map((order) =>
         order.id === orderId ? { ...order, status } : order
-      )
+      ).filter((order) => order.status !== 'completed')
     );
   }, []);
 
@@ -99,22 +143,16 @@ export function OrderProvider({ children }: { children: ReactNode }) {
     return orders.filter((order) => order.status === status);
   }, [orders]);
 
-  const getMaterialById = useCallback((id: string): Material | undefined => {
-    return materials.find((m) => m.id === id);
-  }, [materials]);
-
-  const refreshOrders = useCallback(() => {
-    // In production, this would fetch from API
-    console.log('Refreshing orders...');
-  }, []);
+  const refreshOrders = useCallback(async () => {
+    await fetchOrders();
+  }, [fetchOrders]);
 
   const value: OrderContextType = {
     orders,
-    materials,
+    isLoading,
     addOrder,
     updateOrderStatus,
     getOrdersByStatus,
-    getMaterialById,
     refreshOrders,
   };
 

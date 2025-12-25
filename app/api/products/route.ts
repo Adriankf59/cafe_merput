@@ -11,6 +11,7 @@ import {
 /**
  * GET /api/products
  * Get all products with optional search and jenis_produk filter
+ * Includes availability status based on material stock
  * Requirements: 3.1, 3.2, 3.3
  */
 export async function GET(request: NextRequest) {
@@ -19,7 +20,8 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search') || undefined;
     const jenisProduk = searchParams.get('jenis_produk') || searchParams.get('category') || undefined;
 
-    const products = await productsQuery.getAll(search, jenisProduk);
+    // Get products with availability status
+    const products = await productsQuery.getAllWithAvailability(search, jenisProduk);
     return successResponse(products);
   } catch (error) {
     console.error('Error fetching products:', error);

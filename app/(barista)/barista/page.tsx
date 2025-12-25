@@ -25,12 +25,17 @@ export default function BaristaDashboardPage() {
     router.push('/login');
   };
 
-  const handleRefresh = useCallback(() => {
-    refreshOrders();
+  const handleRefresh = useCallback(async () => {
+    await refreshOrders();
   }, [refreshOrders]);
 
-  const handleStatusChange = useCallback((orderId: string, newStatus: BaristaOrderStatus) => {
-    updateOrderStatus(orderId, newStatus);
+  const handleStatusChange = useCallback(async (orderId: string, newStatus: BaristaOrderStatus) => {
+    try {
+      await updateOrderStatus(orderId, newStatus);
+    } catch (error) {
+      console.error('Failed to update order status:', error);
+      alert('Gagal mengubah status pesanan');
+    }
   }, [updateOrderStatus]);
 
   // Filter out completed orders for display

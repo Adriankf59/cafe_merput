@@ -86,3 +86,51 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     return serverErrorResponse('Gagal menambahkan bahan baku ke produk');
   }
 }
+
+/**
+ * PUT /api/products/[id]/materials
+ * Replace all materials for a product (bulk update)
+ * Requirements: 3.4
+ */
+export async function PUT(request: NextRequest, { params }: RouteParams) {
+  try {
+    const { id } = await params;
+    const body = await request.json();
+    
+    // Check if product exists
+    const product = await productsQuery.getById(id);
+    if (!product) {
+      return notFoundResponse('Produk tidak ditemukan');
+    }
+    
+    const { materials } = body;
+    if (!Array.isArray(materials)) {
+      return errorResponse('Data materials harus berupa array', 400);
+    }
+
+    // Delete all existing materials for this product
+    await productMaterialsQuery.deleteAllByProductId(id);
+
+    // Add new materials
+    for (const mat of materials) {
+      if (mat.bahan_id && mat.jumlah > 0) {
+        // Check if material exists
+        const material = await materialsQuery.getById(mat.bahan_id);
+        if (material) {
+          await productMaterialsQuery.create({
+            produk_id: id,
+            bahan_id: mat.bahan_id,
+            jumlah: mat.jumlah,
+          });
+        }
+      }
+    }
+
+    // Get updated materials
+    const updatedMaterials = await productMaterialsQuery.getByProductId(id);
+    return successResponse(updatedMaterials, 'Komposisi bahan berhasil diperbarui');
+  } catch (error) {
+    console.error('Error updating product materials:', error);
+    return serverErrorResponse('Gagal memperbarui komposisi bahan');
+  }
+}

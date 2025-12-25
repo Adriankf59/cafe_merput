@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { ProductGrid, Cart } from '@/components/features/transaksi';
+import { ProductGrid, Cart, TransactionList, TransactionDetail } from '@/components/features/transaksi';
 import { SearchInput, Button } from '@/components/ui';
-import { Product, CartItem, ProductCategory, BaristaOrderItem } from '@/lib/types';
+import { Product, CartItem, ProductCategory, BaristaOrderItem, Transaction } from '@/lib/types';
 import { getProducts, searchProducts, filterProductsByCategory } from '@/lib/services/products';
 import { addItemToCart, removeItemFromCart, updateItemQuantity, clearCart } from '@/lib/services/cart';
 import { createTransaction } from '@/lib/services/transactions';
@@ -12,7 +12,8 @@ import { useOrders } from '@/lib/context/OrderContext';
 
 const categories: (ProductCategory | 'Semua')[] = ['Semua', 'Kopi', 'Non-Kopi', 'Makanan'];
 
-export default function TransaksiPage() {
+// Kasir View - Input transaksi
+function KasirTransaksiView() {
   const { user } = useAuth();
   const { addOrder } = useOrders();
   const [products, setProducts] = useState<Product[]>([]);
@@ -21,7 +22,6 @@ export default function TransaksiPage() {
   const [activeCategory, setActiveCategory] = useState<ProductCategory | 'Semua'>('Semua');
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch products on mount
   useEffect(() => {
     async function fetchProducts() {
       try {
@@ -38,18 +38,12 @@ export default function TransaksiPage() {
     fetchProducts();
   }, []);
 
-  // Filter products using useMemo instead of useEffect
   const filteredProducts = useMemo(() => {
     let result = products;
-    
-    // Apply search filter
     if (searchQuery) {
       result = searchProducts(result, searchQuery);
     }
-    
-    // Apply category filter
     result = filterProductsByCategory(result, activeCategory);
-    
     return result;
   }, [products, searchQuery, activeCategory]);
 
@@ -67,27 +61,29 @@ export default function TransaksiPage() {
     setCartItems((prev) => updateItemQuantity(prev, productId, quantity));
   };
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     if (cartItems.length === 0 || !user) return;
 
     try {
-      // Create transaction
-      createTransaction(cartItems, user.id, 'Cash');
+      const transaction = await createTransaction(cartItems, user.id, 'Cash');
       
-      // Convert cart items to barista order items
+      if (!transaction) {
+        alert('Gagal membuat transaksi');
+        return;
+      }
+      
       const baristaItems: BaristaOrderItem[] = cartItems.map((item) => ({
         productId: item.productId,
         productName: item.productName,
         quantity: item.quantity,
       }));
       
-      // Send order to barista
-      const order = addOrder(baristaItems, user.id, user.name);
-      
-      // Clear cart after successful transaction
+      const order = await addOrder(baristaItems, user.id, user.name, transaction.id);
       setCartItems(clearCart());
       
-      // Show success message
+      const data = await getProducts();
+      setProducts(data);
+      
       alert(`Transaksi berhasil! Pesanan #${order.orderNumber} telah dikirim ke Barista.`);
     } catch (error) {
       console.error('Failed to process transaction:', error);
@@ -95,27 +91,16 @@ export default function TransaksiPage() {
     }
   };
 
-  const handleSearch = (value: string) => {
-    setSearchQuery(value);
-  };
-
-  const handleCategoryChange = (category: ProductCategory | 'Semua') => {
-    setActiveCategory(category);
-  };
-
   return (
     <div className="h-full flex gap-6">
-      {/* Products Section */}
       <div className="flex-1 flex flex-col min-w-0">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Transaksi Penjualan</h1>
-          
-          {/* Search and Filter */}
           <div className="flex flex-col sm:flex-row gap-4">
             <SearchInput
               placeholder="Cari produk..."
               value={searchQuery}
-              onSearch={handleSearch}
+              onSearch={setSearchQuery}
               className="flex-1"
             />
             <div className="flex gap-2 flex-wrap">
@@ -124,7 +109,7 @@ export default function TransaksiPage() {
                   key={category}
                   variant={activeCategory === category ? 'primary' : 'secondary'}
                   size="sm"
-                  onClick={() => handleCategoryChange(category)}
+                  onClick={() => setActiveCategory(category)}
                 >
                   {category}
                 </Button>
@@ -133,7 +118,6 @@ export default function TransaksiPage() {
           </div>
         </div>
 
-        {/* Product Grid */}
         <div className="flex-1 overflow-y-auto">
           {isLoading ? (
             <div className="flex items-center justify-center h-64">
@@ -143,15 +127,11 @@ export default function TransaksiPage() {
               </div>
             </div>
           ) : (
-            <ProductGrid
-              products={filteredProducts}
-              onProductClick={handleProductClick}
-            />
+            <ProductGrid products={filteredProducts} onProductClick={handleProductClick} />
           )}
         </div>
       </div>
 
-      {/* Cart Section */}
       <div className="w-80 flex-shrink-0">
         <Cart
           items={cartItems}
@@ -162,4 +142,43 @@ export default function TransaksiPage() {
       </div>
     </div>
   );
+}
+
+// Manager View - Rekap transaksi
+function ManagerTransaksiView() {
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+
+  const handleViewDetail = (transaction: Transaction) => {
+    setSelectedTransaction(transaction);
+    setIsDetailOpen(true);
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Rekap Transaksi Penjualan</h1>
+        <p className="text-gray-500 mt-1">Lihat semua transaksi yang dilakukan oleh kasir</p>
+      </div>
+
+      <TransactionList onViewDetail={handleViewDetail} />
+
+      <TransactionDetail
+        transaction={selectedTransaction}
+        isOpen={isDetailOpen}
+        onClose={() => setIsDetailOpen(false)}
+      />
+    </div>
+  );
+}
+
+export default function TransaksiPage() {
+  const { user } = useAuth();
+
+  // Manager dan Admin melihat rekap, Kasir melihat form input
+  if (user?.role === 'Kasir') {
+    return <KasirTransaksiView />;
+  }
+
+  return <ManagerTransaksiView />;
 }

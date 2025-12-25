@@ -4,13 +4,10 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard,
-  ShoppingCart,
-  Users,
-  FileText,
+  Boxes,
   Package,
   ClipboardList,
   Coffee,
-  Boxes,
   LogOut,
 } from 'lucide-react';
 import { useAuth } from '@/lib/context/AuthContext';
@@ -19,21 +16,16 @@ interface MenuItem {
   icon: React.ReactNode;
   label: string;
   href: string;
-  roles?: string[]; // If undefined, visible to all roles
 }
 
 const menuItems: MenuItem[] = [
-  { icon: <LayoutDashboard size={20} />, label: 'Dashboard', href: '/dashboard' },
-  { icon: <ShoppingCart size={20} />, label: 'Transaksi Penjualan', href: '/dashboard/transaksi' },
-  { icon: <Users size={20} />, label: 'Kelola Pegawai', href: '/dashboard/pegawai' },
-  { icon: <FileText size={20} />, label: 'Laporan', href: '/dashboard/laporan' },
-  { icon: <Package size={20} />, label: 'Pemesanan Bahan', href: '/dashboard/pemesanan-bahan', roles: ['Admin', 'Kasir'] },
-  { icon: <ClipboardList size={20} />, label: 'Penerimaan Stok', href: '/dashboard/penerimaan-stok', roles: ['Admin', 'Kasir'] },
-  { icon: <Coffee size={20} />, label: 'Data Produk', href: '/dashboard/produk', roles: ['Admin', 'Kasir'] },
-  { icon: <Boxes size={20} />, label: 'Data Bahan Baku', href: '/dashboard/bahan-baku', roles: ['Admin', 'Kasir'] },
+  { icon: <LayoutDashboard size={20} />, label: 'Dashboard', href: '/pengadaan' },
+  { icon: <Boxes size={20} />, label: 'Data Bahan Baku', href: '/pengadaan/bahan-baku' },
+  { icon: <Package size={20} />, label: 'Pemesanan Bahan', href: '/pengadaan/pemesanan' },
+  { icon: <ClipboardList size={20} />, label: 'Penerimaan Stok', href: '/pengadaan/penerimaan' },
 ];
 
-export default function Sidebar() {
+export default function PengadaanSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { logout, user } = useAuth();
@@ -44,8 +36,8 @@ export default function Sidebar() {
   };
 
   const isActive = (href: string) => {
-    if (href === '/dashboard') {
-      return pathname === '/dashboard';
+    if (href === '/pengadaan') {
+      return pathname === '/pengadaan';
     }
     return pathname.startsWith(href);
   };
@@ -76,9 +68,7 @@ export default function Sidebar() {
       {/* Navigation Menu */}
       <nav className="flex-1 p-4">
         <ul className="space-y-1">
-          {menuItems
-            .filter((item) => !item.roles || (user && item.roles.includes(user.role)))
-            .map((item) => (
+          {menuItems.map((item) => (
             <li key={item.href}>
               <Link
                 href={item.href}

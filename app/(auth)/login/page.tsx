@@ -5,16 +5,31 @@ import { useRouter } from 'next/navigation';
 import { LoginForm } from '@/components/features/auth/LoginForm';
 import { useAuth } from '@/lib/context/AuthContext';
 
+// Helper function to get redirect path based on role
+function getRedirectPath(role: string): string {
+  switch (role) {
+    case 'Barista':
+      return '/barista';
+    case 'Kasir':
+      return '/kasir';
+    case 'Pengadaan':
+      return '/pengadaan';
+    default:
+      return '/dashboard';
+  }
+}
+
 export default function LoginPage() {
   const router = useRouter();
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
 
-  // Redirect to dashboard if already authenticated
+  // Redirect based on role if already authenticated
   useEffect(() => {
-    if (!isLoading && isAuthenticated) {
-      router.push('/dashboard');
+    if (!isLoading && isAuthenticated && user) {
+      const redirectPath = getRedirectPath(user.role);
+      router.push(redirectPath);
     }
-  }, [isAuthenticated, isLoading, router]);
+  }, [isAuthenticated, isLoading, user, router]);
 
   // Show loading while checking auth state
   if (isLoading) {
@@ -51,8 +66,10 @@ export default function LoginPage() {
         <div className="mt-6 p-4 bg-gray-100 rounded-lg">
           <p className="text-sm text-gray-600 font-medium mb-2">Demo Credentials:</p>
           <div className="text-xs text-gray-500 space-y-1">
-            <p>Manager: ahmad@cafemerahputih.com / manager123</p>
-            <p>Kasir: siti@cafemerahputih.com / kasir123</p>
+            <p>Manager: manager@cafemerahputih.com / manager123</p>
+            <p>Kasir: kasir@cafemerahputih.com / kasir123</p>
+            <p>Barista: barista@cafemerahputih.com / barista123</p>
+            <p>Pengadaan: pengadaan@cafemerahputih.com / pengadaan123</p>
           </div>
         </div>
       </div>

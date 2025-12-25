@@ -101,6 +101,30 @@ CREATE TABLE transaction_items (
   FOREIGN KEY (produk_id) REFERENCES products(produk_id) ON DELETE CASCADE
 );
 
+-- Barista Orders table (Orders from Kasir to Barista)
+CREATE TABLE barista_orders (
+  order_id VARCHAR(36) PRIMARY KEY,
+  order_number VARCHAR(20) NOT NULL,
+  transaksi_id VARCHAR(36),
+  cashier_id VARCHAR(36) NOT NULL,
+  status ENUM('waiting', 'processing', 'ready', 'completed') DEFAULT 'waiting',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (transaksi_id) REFERENCES transactions(transaksi_id) ON DELETE SET NULL,
+  FOREIGN KEY (cashier_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
+-- Barista Order Items table
+CREATE TABLE barista_order_items (
+  item_id VARCHAR(36) PRIMARY KEY,
+  order_id VARCHAR(36) NOT NULL,
+  produk_id VARCHAR(36) NOT NULL,
+  jumlah INT NOT NULL,
+  notes TEXT,
+  FOREIGN KEY (order_id) REFERENCES barista_orders(order_id) ON DELETE CASCADE,
+  FOREIGN KEY (produk_id) REFERENCES products(produk_id) ON DELETE CASCADE
+);
+
 
 -- Indexes for better query performance
 CREATE INDEX idx_users_role ON users(role_id);
@@ -118,6 +142,10 @@ CREATE INDEX idx_transactions_user ON transactions(user_id);
 CREATE INDEX idx_transactions_tanggal ON transactions(tanggal);
 CREATE INDEX idx_transaction_items_transaksi ON transaction_items(transaksi_id);
 CREATE INDEX idx_transaction_items_produk ON transaction_items(produk_id);
+CREATE INDEX idx_barista_orders_status ON barista_orders(status);
+CREATE INDEX idx_barista_orders_cashier ON barista_orders(cashier_id);
+CREATE INDEX idx_barista_orders_created ON barista_orders(created_at);
+CREATE INDEX idx_barista_order_items_order ON barista_order_items(order_id);
 
 -- Insert default roles
 INSERT INTO roles (role_id, nama_role) VALUES 

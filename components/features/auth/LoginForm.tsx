@@ -24,12 +24,18 @@ export function LoginForm() {
       
       if (result.success && result.user) {
         // Redirect based on user role
-        if (result.user.role === 'Barista') {
-          router.push('/barista');
-        } else if (result.user.role === 'Kasir') {
-          router.push('/kasir');
-        } else {
-          router.push('/dashboard');
+        switch (result.user.role) {
+          case 'Barista':
+            router.push('/barista');
+            break;
+          case 'Kasir':
+            router.push('/kasir');
+            break;
+          case 'Pengadaan':
+            router.push('/pengadaan');
+            break;
+          default:
+            router.push('/dashboard');
         }
       } else {
         setError(result.error || 'Email atau password salah');

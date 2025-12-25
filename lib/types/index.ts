@@ -6,7 +6,7 @@ export interface User {
   name: string;
   email: string;
   phone: string;
-  role: 'Kasir' | 'Barista' | 'Manager';
+  role: 'Admin' | 'Manager' | 'Kasir' | 'Barista' | 'Pengadaan';
   status: 'Aktif' | 'Nonaktif';
   password?: string;
   createdAt: Date;

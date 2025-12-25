@@ -2,7 +2,6 @@
 
 import { useState, useMemo } from 'react';
 import { Material, MaterialCategory, MaterialUnit } from '@/lib/types';
-import { mockSuppliers } from '@/lib/data/mockData';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
@@ -20,7 +19,6 @@ const units: MaterialUnit[] = ['kg', 'liter', 'pcs'];
 export function MaterialForm({ isOpen, onClose, onSubmit, material }: MaterialFormProps) {
   const isEditing = !!material;
   
-  // Use key to reset form state when material changes
   const formKey = useMemo(() => material?.id || 'new', [material?.id]);
   
   const [name, setName] = useState(material?.name || '');
@@ -28,21 +26,17 @@ export function MaterialForm({ isOpen, onClose, onSubmit, material }: MaterialFo
   const [stock, setStock] = useState(material?.stock?.toString() || '');
   const [unit, setUnit] = useState<MaterialUnit>(material?.unit || 'kg');
   const [minStock, setMinStock] = useState(material?.minStock?.toString() || '');
-  const [supplierId, setSupplierId] = useState(material?.supplierId || mockSuppliers[0]?.id || '');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Reset form when material changes
   const resetForm = () => {
     setName(material?.name || '');
     setCategory(material?.category || 'Kopi');
     setStock(material?.stock?.toString() || '');
     setUnit(material?.unit || 'kg');
     setMinStock(material?.minStock?.toString() || '');
-    setSupplierId(material?.supplierId || mockSuppliers[0]?.id || '');
     setErrors({});
   };
 
-  // Reset when modal opens with different material
   useMemo(() => {
     if (isOpen) {
       resetForm();
@@ -65,10 +59,6 @@ export function MaterialForm({ isOpen, onClose, onSubmit, material }: MaterialFo
       newErrors.minStock = 'Minimum stok harus berupa angka non-negatif';
     }
 
-    if (!supplierId) {
-      newErrors.supplierId = 'Supplier wajib dipilih';
-    }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -78,16 +68,14 @@ export function MaterialForm({ isOpen, onClose, onSubmit, material }: MaterialFo
 
     if (!validate()) return;
 
-    const selectedSupplier = mockSuppliers.find((s) => s.id === supplierId);
-
     onSubmit({
       name: name.trim(),
       category,
       stock: Number(stock),
       unit,
       minStock: Number(minStock),
-      supplierId,
-      supplierName: selectedSupplier?.name || '',
+      supplierId: '',
+      supplierName: '',
     });
 
     onClose();
@@ -161,29 +149,6 @@ export function MaterialForm({ isOpen, onClose, onSubmit, material }: MaterialFo
           placeholder="Batas minimum stok"
           error={errors.minStock}
         />
-
-        <div className="w-full">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Supplier
-          </label>
-          <select
-            value={supplierId}
-            onChange={(e) => setSupplierId(e.target.value)}
-            className={`w-full px-3 py-2 border rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent ${
-              errors.supplierId ? 'border-red-500' : 'border-gray-300'
-            }`}
-          >
-            <option value="">Pilih Supplier</option>
-            {mockSuppliers.map((supplier) => (
-              <option key={supplier.id} value={supplier.id}>
-                {supplier.name}
-              </option>
-            ))}
-          </select>
-          {errors.supplierId && (
-            <p className="mt-1 text-sm text-red-600">{errors.supplierId}</p>
-          )}
-        </div>
 
         <div className="flex justify-end gap-3 pt-4">
           <Button type="button" variant="secondary" onClick={onClose}>

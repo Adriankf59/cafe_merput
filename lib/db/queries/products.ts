@@ -172,3 +172,56 @@ export async function deleteProduct(id: string): Promise<boolean> {
   const result = await execute(sql, [id]);
   return result.affectedRows > 0;
 }
+
+/**
+ * Check product availability based on material stock
+ * Returns true if all required materials have sufficient stock
+ */
+export async function checkProductAvailability(productId: string): Promise<boolean> {
+  const sql = `
+    SELECT 
+      pm.bahan_id,
+      pm.jumlah as required_qty,
+      m.stok_saat_ini as current_stock
+    FROM product_materials pm
+    JOIN materials m ON pm.bahan_id = m.bahan_id
+    WHERE pm.produk_id = ?
+  `;
+  
+  interface MaterialStockRow extends RowDataPacket {
+    bahan_id: string;
+    required_qty: number;
+    current_stock: number;
+  }
+  
+  const rows = await query<MaterialStockRow[]>(sql, [productId]);
+  
+  // If no materials defined, product is available
+  if (rows.length === 0) {
+    return true;
+  }
+  
+  // Check if all materials have sufficient stock
+  return rows.every(row => row.current_stock >= row.required_qty);
+}
+
+/**
+ * Get all products with availability status based on material stock
+ */
+export async function getAllWithAvailability(search?: string, jenisProduk?: string): Promise<(Product & { is_available: boolean })[]> {
+  // First get all products
+  const products = await getAll(search, jenisProduk);
+  
+  // Check availability for each product
+  const productsWithAvailability = await Promise.all(
+    products.map(async (product) => {
+      const isAvailable = await checkProductAvailability(product.produk_id);
+      return {
+        ...product,
+        is_available: isAvailable,
+      };
+    })
+  );
+  
+  return productsWithAvailability;
+}

@@ -47,10 +47,6 @@ export function MaterialTable({ materials, onEdit, onDelete }: MaterialTableProp
       ),
     },
     {
-      key: 'supplierName',
-      header: 'Supplier',
-    },
-    {
       key: 'status',
       header: 'Status',
       render: (material: Material) => (

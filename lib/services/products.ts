@@ -18,13 +18,16 @@ function getHeaders(): HeadersInit {
 
 // Map API response to Product type
 function mapApiProduct(apiProduct: Record<string, unknown>): Product {
+  // Check availability based on is_available field from API
+  const isAvailable = apiProduct.is_available !== false;
+  
   return {
     id: apiProduct.produk_id as string,
     name: apiProduct.nama_produk as string,
     category: apiProduct.jenis_produk as ProductCategory,
     price: Number(apiProduct.harga),
-    stock: Number(apiProduct.stock || 0),
-    status: (apiProduct.stock as number) > 0 ? 'Tersedia' : 'Habis',
+    stock: isAvailable ? 1 : 0, // Use availability for stock indicator
+    status: isAvailable ? 'Tersedia' : 'Habis',
     image: apiProduct.image as string | undefined,
     createdAt: new Date(apiProduct.created_at as string),
   };

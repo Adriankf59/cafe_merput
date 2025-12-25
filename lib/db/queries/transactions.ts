@@ -54,9 +54,9 @@ export interface CreateTransactionDTO {
 }
 
 /**
- * Get all transactions with optional date filter
+ * Get all transactions with optional date filter (includes items)
  */
-export async function getAll(startDate?: Date, endDate?: Date): Promise<TransactionWithUser[]> {
+export async function getAll(startDate?: Date, endDate?: Date): Promise<TransactionWithItems[]> {
   let sql = `
     SELECT t.*, u.username
     FROM transactions t
@@ -78,7 +78,22 @@ export async function getAll(startDate?: Date, endDate?: Date): Promise<Transact
   sql += ' ORDER BY t.tanggal DESC';
 
   const rows = await query<TransactionWithUserRow[]>(sql, params);
-  return rows;
+  
+  // Get items for each transaction
+  const transactionsWithItems: TransactionWithItems[] = await Promise.all(
+    rows.map(async (t) => {
+      const itemsSql = `
+        SELECT ti.*, p.nama_produk, p.harga, (ti.jumlah * ti.harga_satuan) as subtotal
+        FROM transaction_items ti
+        JOIN products p ON ti.produk_id = p.produk_id
+        WHERE ti.transaksi_id = ?
+      `;
+      const items = await query<TransactionItemRow[]>(itemsSql, [t.transaksi_id]);
+      return { ...t, items };
+    })
+  );
+  
+  return transactionsWithItems;
 }
 
 /**
@@ -113,6 +128,7 @@ export async function getById(id: string): Promise<TransactionWithItems | null> 
 
 /**
  * Create a new transaction with items
+ * Also deducts material stock based on product compositions
  */
 export async function create(data: CreateTransactionDTO): Promise<TransactionWithItems> {
   return transaction(async (conn: PoolConnection) => {
@@ -163,6 +179,23 @@ export async function create(data: CreateTransactionDTO): Promise<TransactionWit
         harga: item.harga,
         subtotal: item.harga * item.jumlah,
       });
+
+      // Deduct material stock based on product composition
+      const [productMaterials] = await conn.execute<(RowDataPacket & { bahan_id: string; jumlah: number })[]>(
+        'SELECT bahan_id, jumlah FROM product_materials WHERE produk_id = ?',
+        [item.produk_id]
+      );
+
+      for (const pm of productMaterials) {
+        // Calculate total material needed (composition amount * quantity ordered)
+        const materialNeeded = pm.jumlah * item.jumlah;
+        
+        // Deduct from material stock
+        await conn.execute(
+          'UPDATE materials SET stok_saat_ini = stok_saat_ini - ? WHERE bahan_id = ?',
+          [materialNeeded, pm.bahan_id]
+        );
+      }
     }
 
     // Get user info for the response
