@@ -1,0 +1,325 @@
+# Implementation Plan: Backend MySQL untuk Cafe Merah Putih
+
+## Overview
+
+Implementasi backend API dengan Next.js API Routes dan MySQL database menggunakan mysql2 library. Setiap task membangun di atas task sebelumnya secara incremental. Struktur mengikuti ERD dengan tabel roles, users, products, materials, product_materials, material_orders, transactions, dan transaction_items.
+
+## Tasks
+
+- [x] 1. Setup database dan dependencies
+  - [x] 1.1 Install dependencies (mysql2, jsonwebtoken, bcrypt, zod, uuid)
+    - `npm install mysql2 jsonwebtoken bcrypt zod uuid`
+    - `npm install -D @types/jsonwebtoken @types/bcrypt @types/uuid`
+    - _Requirements: 1.1_
+  - [x] 1.2 Create database schema SQL file
+    - Create lib/db/schema.sql dengan semua tabel sesuai ERD
+    - Include: roles, users, products, materials, product_materials, material_orders, transactions, transaction_items
+    - Include indexes untuk performance
+    - _Requirements: 1.2, 1.5_
+  - [x] 1.3 Create MySQL connection pool
+    - Create lib/db/connection.ts
+    - Setup connection pool dengan environment variables
+    - Export query dan execute helper functions dengan prepared statements
+    - _Requirements: 1.1, 1.3, 1.4, 1.6_
+  - [x] 1.4 Create .env.local template
+    - DATABASE_HOST, DATABASE_PORT, DATABASE_USER, DATABASE_PASSWORD, DATABASE_NAME
+    - JWT_SECRET
+    - _Requirements: 1.1_
+
+- [x] 2. Implement utility functions
+  - [x] 2.1 Create JWT utilities
+    - Create lib/utils/jwt.ts
+    - generateToken, verifyToken, getTokenFromHeader functions
+    - _Requirements: 2.1, 2.4_
+  - [x] 2.2 Create password utilities
+    - Create lib/utils/password.ts
+    - hashPassword, comparePassword functions using bcrypt
+    - _Requirements: 2.1, 5.3_
+  - [x] 2.3 Create API response utilities
+    - Create lib/utils/response.ts
+    - successResponse, errorResponse helper functions
+    - Format: { success: boolean, data?: any, error?: string }
+    - _Requirements: 11.5_
+  - [x] 2.4 Create auth middleware
+    - Create lib/middleware/auth.ts
+    - withAuth wrapper untuk protected routes
+    - _Requirements: 2.4, 2.5_
+
+- [x] 3. Checkpoint - Ensure database connection works
+  - Test koneksi ke MySQL database
+  - Ensure all utility functions work correctly
+
+- [x] 4. Implement validation schemas
+  - [x] 4.1 Create auth validation
+    - Create lib/validations/auth.ts
+    - loginSchema dengan email dan password
+    - _Requirements: 2.1, 2.2_
+  - [x] 4.2 Create role validation
+    - Create lib/validations/role.ts
+    - createRoleSchema, updateRoleSchema
+    - _Requirements: 5.3_
+  - [x] 4.3 Create product validation
+    - Create lib/validations/product.ts
+    - createProductSchema, updateProductSchema
+    - _Requirements: 3.4, 3.5_
+  - [x] 4.4 Create material validation
+    - Create lib/validations/material.ts
+    - createMaterialSchema, updateMaterialSchema
+    - _Requirements: 4.3, 4.4_
+  - [x] 4.5 Create product-material validation
+    - Create lib/validations/product-material.ts
+    - createProductMaterialSchema
+    - _Requirements: 3.4_
+  - [x] 4.6 Create employee validation
+    - Create lib/validations/employee.ts
+    - createEmployeeSchema, updateEmployeeSchema
+    - _Requirements: 5.3, 5.4_
+  - [x] 4.7 Create transaction validation
+    - Create lib/validations/transaction.ts
+    - createTransactionSchema
+    - _Requirements: 6.3_
+  - [x] 4.8 Create order validation
+    - Create lib/validations/order.ts
+    - createOrderSchema, updateOrderStatusSchema
+    - _Requirements: 7.3, 7.4_
+
+- [x] 5. Implement database queries
+  - [x] 5.1 Create roles queries
+    - Create lib/db/queries/roles.ts
+    - getAll, getById, create, update, delete
+    - _Requirements: 5.3_
+  - [x] 5.2 Create users queries
+    - Create lib/db/queries/users.ts
+    - getAll, getById, getByEmail, create, update, delete
+    - _Requirements: 2.1, 5.1, 5.2, 5.3, 5.4, 5.5_
+  - [x] 5.3 Create products queries
+    - Create lib/db/queries/products.ts
+    - getAll, getById, getWithMaterials, create, update, delete
+    - Include search dan jenis_produk filter
+    - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6_
+  - [x] 5.4 Create materials queries
+    - Create lib/db/queries/materials.ts
+    - getAll, getById, create, update, delete, getLowStock, updateStock
+    - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6_
+  - [x] 5.5 Create product-materials queries
+    - Create lib/db/queries/product-materials.ts
+    - getByProductId, getByMaterialId, create, update, delete
+    - _Requirements: 3.4, 3.6_
+  - [x] 5.6 Create transactions queries
+    - Create lib/db/queries/transactions.ts
+    - getAll, getById (with items), create (with items)
+    - _Requirements: 6.1, 6.2, 6.3, 6.4_
+  - [x] 5.7 Create orders queries (Pengadaan Bahan Baku)
+    - Create lib/db/queries/orders.ts
+    - getAll, getById, create, updateStatus (with stock update on 'Diterima')
+    - _Requirements: 7.1, 7.2, 7.3, 7.4_
+  - [x] 5.8 Create dashboard queries
+    - Create lib/db/queries/dashboard.ts
+    - getStats, getWeeklySales, getTopProducts
+    - _Requirements: 9.1, 9.2, 9.3_
+  - [x] 5.9 Create reports queries
+    - Create lib/db/queries/reports.ts
+    - getSummary, getRevenueExpense, getCategorySales
+    - _Requirements: 9.4, 9.5, 9.6_
+
+- [-] 6. Checkpoint - Ensure all queries work
+  - Test semua query functions dengan database
+  - Verify prepared statements digunakan
+
+- [ ] 7. Implement Roles API routes
+  - [ ] 7.1 Create roles list/create endpoint
+    - Create app/api/roles/route.ts
+    - GET handler untuk list all roles
+    - POST handler untuk create role
+    - _Requirements: 5.3_
+  - [ ] 7.2 Create roles detail endpoint
+    - Create app/api/roles/[id]/route.ts
+    - GET, PUT, DELETE handlers
+    - _Requirements: 5.3_
+
+- [ ] 8. Implement Auth API routes
+  - [ ] 8.1 Create login endpoint
+    - Create app/api/auth/login/route.ts
+    - POST handler dengan email/password validation
+    - Return JWT token dan user data
+    - _Requirements: 2.1, 2.2_
+  - [ ] 8.2 Create logout endpoint
+    - Create app/api/auth/logout/route.ts
+    - POST handler untuk logout
+    - _Requirements: 2.3_
+  - [ ] 8.3 Create me endpoint
+    - Create app/api/auth/me/route.ts
+    - GET handler dengan auth middleware
+    - Return current user data
+    - _Requirements: 2.4, 2.5_
+  - [ ]* 8.4 Write property test untuk authentication round trip
+    - **Property 8: Authentication Round Trip**
+    - **Validates: Requirements 2.1, 2.4**
+
+- [ ] 9. Implement Products API routes
+  - [ ] 9.1 Create products list/create endpoint
+    - Create app/api/products/route.ts
+    - GET handler dengan search dan jenis_produk filter
+    - POST handler untuk create product
+    - _Requirements: 3.1, 3.2, 3.3, 3.4_
+  - [ ] 9.2 Create products detail endpoint
+    - Create app/api/products/[id]/route.ts
+    - GET, PUT, DELETE handlers
+    - _Requirements: 3.5, 3.6_
+  - [ ] 9.3 Create product materials endpoint
+    - Create app/api/products/[id]/materials/route.ts
+    - GET handler untuk list materials used by product
+    - POST handler untuk add material to product
+    - _Requirements: 3.4_
+  - [ ]* 9.4 Write property test untuk CRUD round trip
+    - **Property 1: CRUD Round Trip**
+    - **Validates: Requirements 3.4**
+  - [ ]* 9.5 Write property test untuk search filter
+    - **Property 2: Search Filter Correctness**
+    - **Validates: Requirements 3.2**
+  - [ ]* 9.6 Write property test untuk jenis_produk filter
+    - **Property 3: Jenis Produk Filter Correctness**
+    - **Validates: Requirements 3.3**
+
+- [ ] 10. Implement Materials API routes
+  - [ ] 10.1 Create materials list/create endpoint
+    - Create app/api/materials/route.ts
+    - GET handler dengan search filter
+    - POST handler untuk create material
+    - _Requirements: 4.1, 4.2, 4.3_
+  - [ ] 10.2 Create materials detail endpoint
+    - Create app/api/materials/[id]/route.ts
+    - GET, PUT, DELETE handlers
+    - _Requirements: 4.4, 4.5_
+  - [ ] 10.3 Create low-stock endpoint
+    - Create app/api/materials/low-stock/route.ts
+    - GET handler untuk materials dengan stok_saat_ini < stok_minimum
+    - _Requirements: 4.6_
+  - [ ]* 10.4 Write property test untuk material status derivation
+    - **Property 6: Material Status Derivation**
+    - **Validates: Requirements 4.7**
+
+- [ ] 11. Implement Employees API routes
+  - [ ] 11.1 Create employees list/create endpoint
+    - Create app/api/employees/route.ts
+    - GET handler dengan search filter
+    - POST handler dengan password hashing
+    - _Requirements: 5.1, 5.2, 5.3_
+  - [ ] 11.2 Create employees detail endpoint
+    - Create app/api/employees/[id]/route.ts
+    - GET, PUT, DELETE handlers
+    - Exclude password from response
+    - _Requirements: 5.4, 5.5, 5.6_
+  - [ ]* 11.3 Write property test untuk password exclusion
+    - **Property 7: Password Exclusion**
+    - **Validates: Requirements 5.6**
+
+- [ ] 12. Checkpoint - Ensure Products, Materials, Employees API work
+  - Test semua CRUD operations
+  - Verify search dan filter berfungsi
+
+- [ ] 13. Implement Transactions API routes
+  - [ ] 13.1 Create transactions list/create endpoint
+    - Create app/api/transactions/route.ts
+    - GET handler dengan date filter
+    - POST handler - calculate total_harga from items
+    - _Requirements: 6.1, 6.2, 6.3, 6.5_
+  - [ ] 13.2 Create transactions detail endpoint
+    - Create app/api/transactions/[id]/route.ts
+    - GET handler dengan items (Detail Penjualan)
+    - _Requirements: 6.4_
+  - [ ]* 13.3 Write property test untuk transaction total calculation
+    - **Property 4: Transaction Total Correctness**
+    - **Validates: Requirements 6.5**
+
+- [ ] 14. Implement Material Orders API routes (Pengadaan Bahan Baku)
+  - [ ] 14.1 Create orders list/create endpoint
+    - Create app/api/orders/route.ts
+    - GET handler dengan search filter
+    - POST handler untuk create order
+    - _Requirements: 7.1, 7.2, 7.3_
+  - [ ] 14.2 Create orders detail endpoint
+    - Create app/api/orders/[id]/route.ts
+    - GET handler untuk detail
+    - PUT handler untuk update status (update stock when 'Diterima')
+    - _Requirements: 7.4, 7.5_
+  - [ ]* 14.3 Write property test untuk stock update on receipt
+    - **Property 5: Material Stock Update on Order Receipt**
+    - **Validates: Requirements 7.4, 8.3**
+
+- [ ] 15. Checkpoint - Ensure Transactions, Orders API work
+  - Test semua CRUD operations
+  - Verify stock updates berfungsi
+
+- [ ] 16. Implement Dashboard API routes
+  - [ ] 16.1 Create dashboard stats endpoint
+    - Create app/api/dashboard/stats/route.ts
+    - Return total sales, transactions, employees, products sold
+    - _Requirements: 9.1_
+  - [ ] 16.2 Create weekly sales endpoint
+    - Create app/api/dashboard/weekly-sales/route.ts
+    - Return sales data per day
+    - _Requirements: 9.2_
+  - [ ] 16.3 Create top products endpoint
+    - Create app/api/dashboard/top-products/route.ts
+    - Return top selling products
+    - _Requirements: 9.3_
+
+- [ ] 17. Implement Reports API routes
+  - [ ] 17.1 Create reports summary endpoint
+    - Create app/api/reports/summary/route.ts
+    - Return revenue, expenses, profit, transactions
+    - Support period filter (daily, weekly, monthly)
+    - _Requirements: 9.4_
+  - [ ] 17.2 Create revenue-expense endpoint
+    - Create app/api/reports/revenue-expense/route.ts
+    - Return monthly revenue vs expense data
+    - _Requirements: 9.5_
+  - [ ] 17.3 Create category-sales endpoint
+    - Create app/api/reports/category-sales/route.ts
+    - Return sales percentage per jenis_produk
+    - _Requirements: 9.6_
+
+- [ ] 18. Update frontend services to use API
+  - [ ] 18.1 Update auth service
+    - Modify lib/services/auth.ts untuk call API endpoints
+    - _Requirements: 2.1, 2.3, 2.4_
+  - [ ] 18.2 Update products service
+    - Modify lib/services/products.ts untuk call API endpoints
+    - _Requirements: 3.1, 3.4, 3.5, 3.6_
+  - [ ] 18.3 Update materials service
+    - Modify lib/services/materials.ts untuk call API endpoints
+    - _Requirements: 4.1, 4.3, 4.4, 4.5_
+  - [ ] 18.4 Update employees service
+    - Modify lib/services/employees.ts untuk call API endpoints
+    - _Requirements: 5.1, 5.3, 5.4, 5.5_
+  - [ ] 18.5 Update transactions service
+    - Modify lib/services/transactions.ts untuk call API endpoints
+    - _Requirements: 6.1, 6.3_
+  - [ ] 18.6 Update orders service
+    - Modify lib/services/orders.ts untuk call API endpoints
+    - _Requirements: 7.1, 7.3, 7.4_
+
+- [ ] 19. Create seed data script
+  - [ ] 19.1 Create database seed script
+    - Create lib/db/seed.ts
+    - Insert sample data untuk testing
+    - Include default roles dan admin user
+    - _Requirements: 1.2_
+
+- [ ] 20. Final checkpoint - Full integration test
+  - Verify semua API endpoints berfungsi
+  - Verify frontend terintegrasi dengan backend
+  - Verify auth flow complete
+  - Verify semua CRUD operations work end-to-end
+
+## Notes
+
+- Tasks marked with `*` are optional property-based tests
+- Each task references specific requirements for traceability
+- Checkpoints ensure incremental validation
+- Property tests validate universal correctness properties
+- Semua query menggunakan prepared statements untuk keamanan
+- Struktur database mengikuti ERD dengan tabel roles terpisah
+- Pengadaan bahan baku (material_orders) langsung per bahan, bukan per supplier
+- Product-material junction table untuk tracking bahan per produk
