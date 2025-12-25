@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Plus } from 'lucide-react';
 import { Material } from '@/lib/types';
 import {
@@ -18,15 +18,29 @@ import { MaterialForm } from '@/components/features/bahan-baku/MaterialForm';
 import { LowStockAlert } from '@/components/features/bahan-baku/LowStockAlert';
 
 export default function BahanBakuPage() {
-  const [materials, setMaterials] = useState<Material[]>(() => getMaterials());
+  const [materials, setMaterials] = useState<Material[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<Material | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const refreshMaterials = useCallback(() => {
-    setMaterials(getMaterials());
+  const refreshMaterials = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const data = await getMaterials();
+      setMaterials(data);
+    } catch (error) {
+      console.error('Failed to fetch materials:', error);
+      setMaterials([]);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    refreshMaterials();
+  }, [refreshMaterials]);
 
   // Apply search filter
   const filteredMaterials = searchMaterials(materials, searchQuery);

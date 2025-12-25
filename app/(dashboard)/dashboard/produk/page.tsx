@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Plus } from 'lucide-react';
 import { Product, ProductCategory } from '@/lib/types';
 import {
@@ -20,16 +20,30 @@ import { ProductForm } from '@/components/features/produk/ProductForm';
 const categories: (ProductCategory | 'Semua')[] = ['Semua', 'Kopi', 'Non-Kopi', 'Makanan'];
 
 export default function ProdukPage() {
-  const [products, setProducts] = useState<Product[]>(() => getProducts());
+  const [products, setProducts] = useState<Product[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<ProductCategory | 'Semua'>('Semua');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<Product | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const refreshProducts = useCallback(() => {
-    setProducts(getProducts());
+  const refreshProducts = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const data = await getProducts();
+      setProducts(data);
+    } catch (error) {
+      console.error('Failed to fetch products:', error);
+      setProducts([]);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    refreshProducts();
+  }, [refreshProducts]);
 
   // Apply search and category filters
   const filteredProducts = filterProductsByCategory(

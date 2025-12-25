@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Plus } from 'lucide-react';
 import { StockReceipt } from '@/lib/types';
 import {
@@ -16,15 +16,29 @@ import { ReceiptForm } from '@/components/features/penerimaan-stok/ReceiptForm';
 import { ReceiptDetail } from '@/components/features/penerimaan-stok/ReceiptDetail';
 
 export default function PenerimaanStokPage() {
-  const [receipts, setReceipts] = useState<StockReceipt[]>(() => getReceipts());
+  const [receipts, setReceipts] = useState<StockReceipt[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState<StockReceipt | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const refreshReceipts = useCallback(() => {
-    setReceipts(getReceipts());
+  const refreshReceipts = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const data = await getReceipts();
+      setReceipts(data);
+    } catch (error) {
+      console.error('Failed to fetch receipts:', error);
+      setReceipts([]);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    refreshReceipts();
+  }, [refreshReceipts]);
 
   // Apply search filter
   const filteredReceipts = searchReceipts(receipts, searchQuery);

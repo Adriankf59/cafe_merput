@@ -32,14 +32,14 @@ interface ProductMaterialRow extends RowDataPacket, ProductMaterial {}
 export interface CreateProductDTO {
   nama_produk: string;
   harga: number;
-  deskripsi?: string;
+  deskripsi?: string | null;
   jenis_produk: 'Kopi' | 'Non-Kopi' | 'Makanan';
 }
 
 export interface UpdateProductDTO {
   nama_produk?: string;
   harga?: number;
-  deskripsi?: string;
+  deskripsi?: string | null;
   jenis_produk?: 'Kopi' | 'Non-Kopi' | 'Makanan';
 }
 

@@ -18,6 +18,20 @@ export const createProductMaterialSchema = z.object({
 });
 
 /**
+ * Add material to product validation schema (for nested route)
+ * produk_id comes from URL parameter
+ * Requirements: 3.4
+ */
+export const addMaterialToProductSchema = z.object({
+  bahan_id: z
+    .string({ required_error: 'ID bahan wajib diisi' })
+    .uuid('Format ID bahan tidak valid'),
+  jumlah: z
+    .number({ required_error: 'Jumlah wajib diisi' })
+    .positive('Jumlah harus lebih dari 0'),
+});
+
+/**
  * Update product-material relationship validation schema
  * Requirements: 3.4
  */
@@ -28,4 +42,5 @@ export const updateProductMaterialSchema = z.object({
 });
 
 export type CreateProductMaterialInput = z.infer<typeof createProductMaterialSchema>;
+export type AddMaterialToProductInput = z.infer<typeof addMaterialToProductSchema>;
 export type UpdateProductMaterialInput = z.infer<typeof updateProductMaterialSchema>;

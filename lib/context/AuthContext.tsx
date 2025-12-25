@@ -7,8 +7,8 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  logout: () => void;
+  login: (email: string, password: string) => Promise<{ success: boolean; user?: User; error?: string }>;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -38,7 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     checkSession();
   }, []);
 
-  const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+  const login = async (email: string, password: string): Promise<{ success: boolean; user?: User; error?: string }> => {
     try {
       // Import auth service dynamically to avoid circular dependencies
       const { authService } = await import('@/lib/services/auth');
@@ -47,7 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (result.success && result.user) {
         setUser(result.user);
         localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(result.user));
-        return { success: true };
+        return { success: true, user: result.user };
       }
       
       return { success: false, error: result.error || 'Login gagal' };
@@ -56,9 +56,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem(AUTH_STORAGE_KEY);
+  const logout = async () => {
+    try {
+      const { authService } = await import('@/lib/services/auth');
+      await authService.logout();
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setUser(null);
+      localStorage.removeItem(AUTH_STORAGE_KEY);
+    }
   };
 
   const value: AuthContextType = {

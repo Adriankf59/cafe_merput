@@ -1,93 +1,203 @@
 import { User } from '@/lib/types';
-import { mockUsers } from '@/lib/data/mockData';
 
 interface LoginResult {
   success: boolean;
   user?: User;
+  token?: string;
   error?: string;
 }
 
 interface AuthService {
   login: (email: string, password: string) => Promise<LoginResult>;
-  logout: () => void;
-  checkSession: () => User | null;
-  getCurrentUser: () => User | null;
+  logout: () => Promise<void>;
+  checkSession: () => Promise<User | null>;
+  getCurrentUser: () => Promise<User | null>;
 }
 
-const AUTH_STORAGE_KEY = 'cafe_merah_putih_auth';
+const AUTH_TOKEN_KEY = 'cafe_merah_putih_token';
+const AUTH_USER_KEY = 'cafe_merah_putih_user';
+
+// Helper to get stored token
+function getStoredToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem(AUTH_TOKEN_KEY);
+}
+
+// Helper to get stored user
+function getStoredUser(): User | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const stored = localStorage.getItem(AUTH_USER_KEY);
+    if (stored) {
+      const user = JSON.parse(stored);
+      return {
+        ...user,
+        createdAt: new Date(user.createdAt),
+      };
+    }
+  } catch {
+    localStorage.removeItem(AUTH_USER_KEY);
+  }
+  return null;
+}
+
+// Helper to store auth data
+function storeAuthData(token: string, user: User): void {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(AUTH_TOKEN_KEY, token);
+  localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
+}
+
+// Helper to clear auth data
+function clearAuthData(): void {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem(AUTH_TOKEN_KEY);
+  localStorage.removeItem(AUTH_USER_KEY);
+}
 
 export const authService: AuthService = {
   /**
    * Authenticate user with email and password
-   * Requirements: 1.2 - Valid credentials authentication
+   * Requirements: 2.1 - Valid credentials authentication via API
    */
   login: async (email: string, password: string): Promise<LoginResult> => {
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 300));
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
 
-    // Find user by email
-    const user = mockUsers.find(
-      u => u.email.toLowerCase() === email.toLowerCase() && u.password === password
-    );
+      const data = await response.json();
 
-    if (!user) {
+      if (!response.ok || !data.success) {
+        return {
+          success: false,
+          error: data.error || 'Email atau password salah',
+        };
+      }
+
+      // Map API response to User type
+      const user: User = {
+        id: data.data.user.user_id,
+        name: data.data.user.username,
+        email: data.data.user.email,
+        phone: data.data.user.phone || '',
+        role: data.data.user.nama_role || data.data.user.role_name || data.data.user.role,
+        status: data.data.user.status,
+        createdAt: data.data.user.created_at ? new Date(data.data.user.created_at) : new Date(),
+      };
+
+      // Store token and user data
+      storeAuthData(data.data.token, user);
+
+      return {
+        success: true,
+        user,
+        token: data.data.token,
+      };
+    } catch (error) {
+      console.error('Login error:', error);
       return {
         success: false,
-        error: 'Email atau password salah',
+        error: 'Terjadi kesalahan saat login. Silakan coba lagi.',
       };
     }
-
-    // Check if user is active
-    if (user.status === 'Nonaktif') {
-      return {
-        success: false,
-        error: 'Akun Anda tidak aktif. Hubungi manager.',
-      };
-    }
-
-    // Return user without password
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password: _pwd, ...userWithoutPassword } = user;
-    return {
-      success: true,
-      user: userWithoutPassword as User,
-    };
   },
 
   /**
    * Logout user and clear session
-   * Requirements: 1.4 - End session on logout
+   * Requirements: 2.3 - End session on logout via API
    */
-  logout: () => {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem(AUTH_STORAGE_KEY);
+  logout: async (): Promise<void> => {
+    try {
+      const token = getStoredToken();
+      if (token) {
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      // Always clear local storage
+      clearAuthData();
     }
   },
 
   /**
-   * Check if there's an existing session
-   * Requirements: 1.5 - Store authenticated user session
+   * Check if there's an existing session by verifying token with API
+   * Requirements: 2.4 - Verify token and get current user
    */
-  checkSession: (): User | null => {
-    if (typeof window === 'undefined') {
+  checkSession: async (): Promise<User | null> => {
+    const token = getStoredToken();
+    if (!token) {
       return null;
     }
 
     try {
-      const storedAuth = localStorage.getItem(AUTH_STORAGE_KEY);
-      if (storedAuth) {
-        return JSON.parse(storedAuth) as User;
+      const response = await fetch('/api/auth/me', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        // Token invalid or expired, clear storage
+        clearAuthData();
+        return null;
       }
-    } catch {
-      localStorage.removeItem(AUTH_STORAGE_KEY);
+
+      // Map API response to User type
+      const user: User = {
+        id: data.data.user_id,
+        name: data.data.username,
+        email: data.data.email,
+        phone: data.data.phone || '',
+        role: data.data.role_name || data.data.role,
+        status: data.data.status,
+        createdAt: new Date(data.data.created_at),
+      };
+
+      // Update stored user data
+      localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
+
+      return user;
+    } catch (error) {
+      console.error('Check session error:', error);
+      // On network error, return cached user if available
+      return getStoredUser();
     }
-    return null;
   },
 
   /**
-   * Get current authenticated user
+   * Get current authenticated user (from cache or API)
    */
-  getCurrentUser: (): User | null => {
+  getCurrentUser: async (): Promise<User | null> => {
+    // First try to get from cache
+    const cachedUser = getStoredUser();
+    if (cachedUser) {
+      return cachedUser;
+    }
+    // If no cached user, check session with API
     return authService.checkSession();
   },
 };
+
+// Export helper to get token for API calls
+export function getAuthToken(): string | null {
+  return getStoredToken();
+}
+
+// Export helper to check if user is authenticated
+export function isAuthenticated(): boolean {
+  return getStoredToken() !== null;
+}

@@ -113,10 +113,12 @@ export async function updateStatus(id: string, data: UpdateOrderStatusDTO): Prom
   // If status is changing to 'Diterima', update stock in a transaction
   if (data.status === 'Diterima' && existing.status !== 'Diterima') {
     return transaction(async (conn: PoolConnection) => {
+      const tanggalTerima = data.tanggal_terima || new Date();
+      
       // Update order status
       await conn.execute(
         'UPDATE material_orders SET status = ?, tanggal_terima = ? WHERE pengadaan_id = ?',
-        [data.status, data.tanggal_terima || new Date(), id]
+        [data.status, tanggalTerima, id]
       );
 
       // Update material stock
@@ -125,11 +127,19 @@ export async function updateStatus(id: string, data: UpdateOrderStatusDTO): Prom
         [existing.jumlah, existing.bahan_id]
       );
 
-      const updated = await getById(id);
-      if (!updated) {
+      // Return updated order with details (query within transaction)
+      const [rows] = await conn.execute<MaterialOrderWithDetailsRow[]>(`
+        SELECT mo.*, m.nama_bahan, m.satuan, u.username
+        FROM material_orders mo
+        JOIN materials m ON mo.bahan_id = m.bahan_id
+        JOIN users u ON mo.user_id = u.user_id
+        WHERE mo.pengadaan_id = ?
+      `, [id]);
+      
+      if (rows.length === 0) {
         throw new Error('Failed to update material order');
       }
-      return updated;
+      return rows[0];
     });
   }
 

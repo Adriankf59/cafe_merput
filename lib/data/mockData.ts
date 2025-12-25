@@ -14,6 +14,7 @@ import {
   ReportStats,
   MonthlyData,
   CategorySales,
+  ProductMaterial,
 } from '../types';
 
 // ==================== Suppliers ====================
@@ -505,4 +506,49 @@ export const mockCategorySales: CategorySales[] = [
   { category: 'Kopi', percentage: 55, color: '#DC2626' },
   { category: 'Non-Kopi', percentage: 28, color: '#F87171' },
   { category: 'Makanan', percentage: 17, color: '#FCA5A5' },
+];
+
+// ==================== Product Material Composition ====================
+// Defines how much of each material is needed to make one product
+
+export const mockProductMaterials: ProductMaterial[] = [
+  // Espresso - needs coffee beans
+  { productId: 'PRD001', materialId: 'MAT001', quantity: 0.018 }, // 18g Arabica
+  
+  // Americano - needs coffee beans
+  { productId: 'PRD002', materialId: 'MAT001', quantity: 0.018 }, // 18g Arabica
+  
+  // Cappuccino - needs coffee beans + milk
+  { productId: 'PRD003', materialId: 'MAT001', quantity: 0.018 }, // 18g Arabica
+  { productId: 'PRD003', materialId: 'MAT003', quantity: 0.15 },  // 150ml Full Cream Milk
+  
+  // Latte - needs coffee beans + more milk
+  { productId: 'PRD004', materialId: 'MAT001', quantity: 0.018 }, // 18g Arabica
+  { productId: 'PRD004', materialId: 'MAT003', quantity: 0.2 },   // 200ml Full Cream Milk
+  
+  // Mocha - needs coffee beans + milk + sugar
+  { productId: 'PRD005', materialId: 'MAT001', quantity: 0.018 }, // 18g Arabica
+  { productId: 'PRD005', materialId: 'MAT003', quantity: 0.15 },  // 150ml Full Cream Milk
+  { productId: 'PRD005', materialId: 'MAT005', quantity: 0.02 },  // 20g Sugar
+  
+  // Matcha Latte - needs oat milk + sugar
+  { productId: 'PRD006', materialId: 'MAT004', quantity: 0.2 },   // 200ml Oat Milk
+  { productId: 'PRD006', materialId: 'MAT005', quantity: 0.015 }, // 15g Sugar
+  
+  // Teh Tarik - needs milk + sugar
+  { productId: 'PRD007', materialId: 'MAT003', quantity: 0.1 },   // 100ml Full Cream Milk
+  { productId: 'PRD007', materialId: 'MAT005', quantity: 0.025 }, // 25g Sugar
+  
+  // Coklat Panas - needs milk + sugar
+  { productId: 'PRD008', materialId: 'MAT003', quantity: 0.2 },   // 200ml Full Cream Milk
+  { productId: 'PRD008', materialId: 'MAT005', quantity: 0.03 },  // 30g Sugar
+  
+  // Croissant - uses cup (packaging)
+  { productId: 'PRD010', materialId: 'MAT007', quantity: 1 },     // 1 plastic container
+  
+  // Roti Bakar - uses cup (packaging)
+  { productId: 'PRD011', materialId: 'MAT007', quantity: 1 },     // 1 plastic container
+  
+  // Sandwich - uses cup (packaging)
+  { productId: 'PRD012', materialId: 'MAT007', quantity: 1 },     // 1 plastic container
 ];

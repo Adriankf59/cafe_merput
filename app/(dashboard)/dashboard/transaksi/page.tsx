@@ -1,25 +1,42 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { ProductGrid, Cart } from '@/components/features/transaksi';
 import { SearchInput, Button } from '@/components/ui';
-import { Product, CartItem, ProductCategory } from '@/lib/types';
+import { Product, CartItem, ProductCategory, BaristaOrderItem } from '@/lib/types';
 import { getProducts, searchProducts, filterProductsByCategory } from '@/lib/services/products';
 import { addItemToCart, removeItemFromCart, updateItemQuantity, clearCart } from '@/lib/services/cart';
 import { createTransaction } from '@/lib/services/transactions';
 import { useAuth } from '@/lib/context/AuthContext';
+import { useOrders } from '@/lib/context/OrderContext';
 
 const categories: (ProductCategory | 'Semua')[] = ['Semua', 'Kopi', 'Non-Kopi', 'Makanan'];
 
-// Initialize products outside component to avoid effect
-const initialProducts = typeof window !== 'undefined' ? getProducts() : [];
-
 export default function TransaksiPage() {
   const { user } = useAuth();
-  const [products] = useState<Product[]>(initialProducts);
+  const { addOrder } = useOrders();
+  const [products, setProducts] = useState<Product[]>([]);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<ProductCategory | 'Semua'>('Semua');
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch products on mount
+  useEffect(() => {
+    async function fetchProducts() {
+      try {
+        setIsLoading(true);
+        const data = await getProducts();
+        setProducts(data);
+      } catch (error) {
+        console.error('Failed to fetch products:', error);
+        setProducts([]);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchProducts();
+  }, []);
 
   // Filter products using useMemo instead of useEffect
   const filteredProducts = useMemo(() => {
@@ -57,11 +74,21 @@ export default function TransaksiPage() {
       // Create transaction
       createTransaction(cartItems, user.id, 'Cash');
       
+      // Convert cart items to barista order items
+      const baristaItems: BaristaOrderItem[] = cartItems.map((item) => ({
+        productId: item.productId,
+        productName: item.productName,
+        quantity: item.quantity,
+      }));
+      
+      // Send order to barista
+      const order = addOrder(baristaItems, user.id, user.name);
+      
       // Clear cart after successful transaction
       setCartItems(clearCart());
       
-      // Show success message (could use toast in production)
-      alert('Transaksi berhasil!');
+      // Show success message
+      alert(`Transaksi berhasil! Pesanan #${order.orderNumber} telah dikirim ke Barista.`);
     } catch (error) {
       console.error('Failed to process transaction:', error);
       alert('Gagal memproses transaksi');
@@ -108,10 +135,19 @@ export default function TransaksiPage() {
 
         {/* Product Grid */}
         <div className="flex-1 overflow-y-auto">
-          <ProductGrid
-            products={filteredProducts}
-            onProductClick={handleProductClick}
-          />
+          {isLoading ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-10 h-10 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                <p className="text-gray-500">Memuat produk...</p>
+              </div>
+            </div>
+          ) : (
+            <ProductGrid
+              products={filteredProducts}
+              onProductClick={handleProductClick}
+            />
+          )}
         </div>
       </div>
 

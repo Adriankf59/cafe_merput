@@ -1,7 +1,8 @@
 import { z } from 'zod';
 
 /**
- * Transaction item validation schema
+ * Transaction item validation schema for API input
+ * Note: harga_satuan is optional - will be fetched from products table
  */
 export const transactionItemSchema = z.object({
   produk_id: z
@@ -11,14 +12,12 @@ export const transactionItemSchema = z.object({
     .number({ required_error: 'Jumlah wajib diisi' })
     .int('Jumlah harus bilangan bulat')
     .positive('Jumlah harus lebih dari 0'),
-  harga_satuan: z
-    .number({ required_error: 'Harga satuan wajib diisi' })
-    .positive('Harga satuan harus lebih dari 0'),
 });
 
 /**
  * Create transaction validation schema
  * Requirements: 6.3
+ * Note: total_harga is calculated from items (product.harga × jumlah)
  */
 export const createTransactionSchema = z.object({
   user_id: z

@@ -120,11 +120,11 @@ export async function create(data: CreateTransactionDTO): Promise<TransactionWit
     
     // Calculate total from items
     let totalHarga = 0;
-    const itemsWithPrices: { produk_id: string; jumlah: number; harga: number }[] = [];
+    const itemsWithPrices: { produk_id: string; jumlah: number; harga: number; nama_produk: string }[] = [];
 
     for (const item of data.items) {
-      const [products] = await conn.execute<(RowDataPacket & { harga: number })[]>(
-        'SELECT harga FROM products WHERE produk_id = ?',
+      const [products] = await conn.execute<(RowDataPacket & { harga: number; nama_produk: string })[]>(
+        'SELECT harga, nama_produk FROM products WHERE produk_id = ?',
         [item.produk_id]
       );
       
@@ -133,8 +133,9 @@ export async function create(data: CreateTransactionDTO): Promise<TransactionWit
       }
 
       const harga = products[0].harga;
+      const nama_produk = products[0].nama_produk;
       totalHarga += harga * item.jumlah;
-      itemsWithPrices.push({ ...item, harga });
+      itemsWithPrices.push({ ...item, harga, nama_produk });
     }
 
     // Insert transaction
@@ -143,21 +144,45 @@ export async function create(data: CreateTransactionDTO): Promise<TransactionWit
       [transactionId, data.user_id, totalHarga]
     );
 
-    // Insert transaction items
+    // Insert transaction items and build items array
+    const items: TransactionItemWithProduct[] = [];
     for (const item of itemsWithPrices) {
       const detailId = uuidv4();
       await conn.execute(
         'INSERT INTO transaction_items (detail_id, transaksi_id, produk_id, jumlah, harga_satuan) VALUES (?, ?, ?, ?, ?)',
         [detailId, transactionId, item.produk_id, item.jumlah, item.harga]
       );
+      
+      items.push({
+        detail_id: detailId,
+        transaksi_id: transactionId,
+        produk_id: item.produk_id,
+        jumlah: item.jumlah,
+        harga_satuan: item.harga,
+        nama_produk: item.nama_produk,
+        harga: item.harga,
+        subtotal: item.harga * item.jumlah,
+      });
     }
 
-    // Return the created transaction
-    const created = await getById(transactionId);
-    if (!created) {
-      throw new Error('Failed to create transaction');
-    }
-    return created;
+    // Get user info for the response
+    const [users] = await conn.execute<(RowDataPacket & { username: string })[]>(
+      'SELECT username FROM users WHERE user_id = ?',
+      [data.user_id]
+    );
+    
+    const username = users.length > 0 ? users[0].username : '';
+
+    // Return the created transaction with items
+    return {
+      transaksi_id: transactionId,
+      user_id: data.user_id,
+      tanggal: new Date(),
+      total_harga: totalHarga,
+      created_at: new Date(),
+      username,
+      items,
+    };
   });
 }
 

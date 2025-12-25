@@ -156,17 +156,17 @@ Implementasi backend API dengan Next.js API Routes dan MySQL database menggunaka
     - **Property 8: Authentication Round Trip**
     - **Validates: Requirements 2.1, 2.4**
 
-- [-] 9. Implement Products API routes
-  - [ ] 9.1 Create products list/create endpoint
+- [x] 9. Implement Products API routes
+  - [x] 9.1 Create products list/create endpoint
     - Create app/api/products/route.ts
     - GET handler dengan search dan jenis_produk filter
     - POST handler untuk create product
     - _Requirements: 3.1, 3.2, 3.3, 3.4_
-  - [ ] 9.2 Create products detail endpoint
+  - [x] 9.2 Create products detail endpoint
     - Create app/api/products/[id]/route.ts
     - GET, PUT, DELETE handlers
     - _Requirements: 3.5, 3.6_
-  - [ ] 9.3 Create product materials endpoint
+  - [x] 9.3 Create product materials endpoint
     - Create app/api/products/[id]/materials/route.ts
     - GET handler untuk list materials used by product
     - POST handler untuk add material to product
@@ -181,17 +181,17 @@ Implementasi backend API dengan Next.js API Routes dan MySQL database menggunaka
     - **Property 3: Jenis Produk Filter Correctness**
     - **Validates: Requirements 3.3**
 
-- [ ] 10. Implement Materials API routes
-  - [ ] 10.1 Create materials list/create endpoint
+- [x] 10. Implement Materials API routes
+  - [x] 10.1 Create materials list/create endpoint
     - Create app/api/materials/route.ts
     - GET handler dengan search filter
     - POST handler untuk create material
     - _Requirements: 4.1, 4.2, 4.3_
-  - [ ] 10.2 Create materials detail endpoint
+  - [x] 10.2 Create materials detail endpoint
     - Create app/api/materials/[id]/route.ts
     - GET, PUT, DELETE handlers
     - _Requirements: 4.4, 4.5_
-  - [ ] 10.3 Create low-stock endpoint
+  - [x] 10.3 Create low-stock endpoint
     - Create app/api/materials/low-stock/route.ts
     - GET handler untuk materials dengan stok_saat_ini < stok_minimum
     - _Requirements: 4.6_
@@ -199,13 +199,13 @@ Implementasi backend API dengan Next.js API Routes dan MySQL database menggunaka
     - **Property 6: Material Status Derivation**
     - **Validates: Requirements 4.7**
 
-- [ ] 11. Implement Employees API routes
-  - [ ] 11.1 Create employees list/create endpoint
+- [x] 11. Implement Employees API routes
+  - [x] 11.1 Create employees list/create endpoint
     - Create app/api/employees/route.ts
     - GET handler dengan search filter
     - POST handler dengan password hashing
     - _Requirements: 5.1, 5.2, 5.3_
-  - [ ] 11.2 Create employees detail endpoint
+  - [x] 11.2 Create employees detail endpoint
     - Create app/api/employees/[id]/route.ts
     - GET, PUT, DELETE handlers
     - Exclude password from response
@@ -214,17 +214,17 @@ Implementasi backend API dengan Next.js API Routes dan MySQL database menggunaka
     - **Property 7: Password Exclusion**
     - **Validates: Requirements 5.6**
 
-- [ ] 12. Checkpoint - Ensure Products, Materials, Employees API work
+- [x] 12. Checkpoint - Ensure Products, Materials, Employees API work
   - Test semua CRUD operations
   - Verify search dan filter berfungsi
 
-- [ ] 13. Implement Transactions API routes
-  - [ ] 13.1 Create transactions list/create endpoint
+- [x] 13. Implement Transactions API routes
+  - [x] 13.1 Create transactions list/create endpoint
     - Create app/api/transactions/route.ts
     - GET handler dengan date filter
     - POST handler - calculate total_harga from items
     - _Requirements: 6.1, 6.2, 6.3, 6.5_
-  - [ ] 13.2 Create transactions detail endpoint
+  - [x] 13.2 Create transactions detail endpoint
     - Create app/api/transactions/[id]/route.ts
     - GET handler dengan items (Detail Penjualan)
     - _Requirements: 6.4_
@@ -232,13 +232,13 @@ Implementasi backend API dengan Next.js API Routes dan MySQL database menggunaka
     - **Property 4: Transaction Total Correctness**
     - **Validates: Requirements 6.5**
 
-- [ ] 14. Implement Material Orders API routes (Pengadaan Bahan Baku)
-  - [ ] 14.1 Create orders list/create endpoint
+- [x] 14. Implement Material Orders API routes (Pengadaan Bahan Baku)
+  - [x] 14.1 Create orders list/create endpoint
     - Create app/api/orders/route.ts
     - GET handler dengan search filter
     - POST handler untuk create order
     - _Requirements: 7.1, 7.2, 7.3_
-  - [ ] 14.2 Create orders detail endpoint
+  - [x] 14.2 Create orders detail endpoint
     - Create app/api/orders/[id]/route.ts
     - GET handler untuk detail
     - PUT handler untuk update status (update stock when 'Diterima')
@@ -247,61 +247,61 @@ Implementasi backend API dengan Next.js API Routes dan MySQL database menggunaka
     - **Property 5: Material Stock Update on Order Receipt**
     - **Validates: Requirements 7.4, 8.3**
 
-- [ ] 15. Checkpoint - Ensure Transactions, Orders API work
+- [x] 15. Checkpoint - Ensure Transactions, Orders API work
   - Test semua CRUD operations
   - Verify stock updates berfungsi
 
-- [ ] 16. Implement Dashboard API routes
-  - [ ] 16.1 Create dashboard stats endpoint
+- [x] 16. Implement Dashboard API routes
+  - [x] 16.1 Create dashboard stats endpoint
     - Create app/api/dashboard/stats/route.ts
     - Return total sales, transactions, employees, products sold
     - _Requirements: 9.1_
-  - [ ] 16.2 Create weekly sales endpoint
+  - [x] 16.2 Create weekly sales endpoint
     - Create app/api/dashboard/weekly-sales/route.ts
     - Return sales data per day
     - _Requirements: 9.2_
-  - [ ] 16.3 Create top products endpoint
+  - [x] 16.3 Create top products endpoint
     - Create app/api/dashboard/top-products/route.ts
     - Return top selling products
     - _Requirements: 9.3_
 
-- [ ] 17. Implement Reports API routes
-  - [ ] 17.1 Create reports summary endpoint
+- [x] 17. Implement Reports API routes
+  - [x] 17.1 Create reports summary endpoint
     - Create app/api/reports/summary/route.ts
     - Return revenue, expenses, profit, transactions
     - Support period filter (daily, weekly, monthly)
     - _Requirements: 9.4_
-  - [ ] 17.2 Create revenue-expense endpoint
+  - [x] 17.2 Create revenue-expense endpoint
     - Create app/api/reports/revenue-expense/route.ts
     - Return monthly revenue vs expense data
     - _Requirements: 9.5_
-  - [ ] 17.3 Create category-sales endpoint
+  - [x] 17.3 Create category-sales endpoint
     - Create app/api/reports/category-sales/route.ts
     - Return sales percentage per jenis_produk
     - _Requirements: 9.6_
 
-- [ ] 18. Update frontend services to use API
-  - [ ] 18.1 Update auth service
+- [x] 18. Update frontend services to use API
+  - [x] 18.1 Update auth service
     - Modify lib/services/auth.ts untuk call API endpoints
     - _Requirements: 2.1, 2.3, 2.4_
-  - [ ] 18.2 Update products service
+  - [x] 18.2 Update products service
     - Modify lib/services/products.ts untuk call API endpoints
     - _Requirements: 3.1, 3.4, 3.5, 3.6_
-  - [ ] 18.3 Update materials service
+  - [x] 18.3 Update materials service
     - Modify lib/services/materials.ts untuk call API endpoints
     - _Requirements: 4.1, 4.3, 4.4, 4.5_
-  - [ ] 18.4 Update employees service
+  - [x] 18.4 Update employees service
     - Modify lib/services/employees.ts untuk call API endpoints
     - _Requirements: 5.1, 5.3, 5.4, 5.5_
-  - [ ] 18.5 Update transactions service
+  - [x] 18.5 Update transactions service
     - Modify lib/services/transactions.ts untuk call API endpoints
     - _Requirements: 6.1, 6.3_
-  - [ ] 18.6 Update orders service
+  - [x] 18.6 Update orders service
     - Modify lib/services/orders.ts untuk call API endpoints
     - _Requirements: 7.1, 7.3, 7.4_
 
-- [ ] 19. Create seed data script
-  - [ ] 19.1 Create database seed script
+- [x] 19. Create seed data script
+  - [x] 19.1 Create database seed script
     - Create lib/db/seed.ts
     - Insert sample data untuk testing
     - Include default roles dan admin user

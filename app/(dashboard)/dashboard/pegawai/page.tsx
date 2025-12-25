@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { User } from '@/lib/types';
 import {
   getEmployees,
@@ -16,16 +16,30 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Plus, Users } from 'lucide-react';
 
-// Initialize employees outside component to avoid effect
-const initialEmployees = typeof window !== 'undefined' ? getEmployees() : [];
-
 export default function PegawaiPage() {
-  const [employees, setEmployees] = useState<User[]>(initialEmployees);
+  const [employees, setEmployees] = useState<User[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<User | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchEmployees() {
+      try {
+        setIsLoading(true);
+        const data = await getEmployees();
+        setEmployees(data);
+      } catch (error) {
+        console.error('Failed to fetch employees:', error);
+        setEmployees([]);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchEmployees();
+  }, []);
 
   // Filter employees based on search
   const filteredEmployees = useMemo(() => {

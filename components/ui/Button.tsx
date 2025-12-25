@@ -3,7 +3,7 @@
 import React from 'react';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
+  variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'success';
   size?: 'sm' | 'md' | 'lg';
   children: React.ReactNode;
   icon?: React.ReactNode;
@@ -14,6 +14,7 @@ const variantStyles = {
   secondary: 'bg-white hover:bg-gray-50 text-gray-700 border-gray-300',
   danger: 'bg-red-100 hover:bg-red-200 text-red-700 border-transparent',
   ghost: 'bg-transparent hover:bg-gray-100 text-gray-700 border-transparent',
+  success: 'bg-green-600 hover:bg-green-700 text-white border-transparent',
 };
 
 const sizeStyles = {

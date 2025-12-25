@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Plus } from 'lucide-react';
 import { MaterialOrder } from '@/lib/types';
 import {
@@ -16,15 +16,30 @@ import { OrderForm } from '@/components/features/pemesanan-bahan/OrderForm';
 import { OrderDetail } from '@/components/features/pemesanan-bahan/OrderDetail';
 
 export default function PemesananBahanPage() {
-  const [orders, setOrders] = useState<MaterialOrder[]>(() => getOrders());
+  const [orders, setOrders] = useState<MaterialOrder[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<MaterialOrder | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const refreshOrders = useCallback(() => {
-    setOrders(getOrders());
+  const refreshOrders = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const data = await getOrders();
+      setOrders(data);
+    } catch (error) {
+      console.error('Failed to fetch orders:', error);
+      setOrders([]);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
+
+  // Fetch orders on mount
+  useEffect(() => {
+    refreshOrders();
+  }, [refreshOrders]);
 
   // Apply search filter
   const filteredOrders = searchOrders(orders, searchQuery);
@@ -65,10 +80,19 @@ export default function PemesananBahanPage() {
         </div>
 
         {/* Orders Table */}
-        <OrdersTable
-          orders={filteredOrders}
-          onViewDetail={handleViewDetail}
-        />
+        {isLoading ? (
+          <div className="flex items-center justify-center h-64">
+            <div className="flex flex-col items-center gap-3">
+              <div className="w-10 h-10 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+              <p className="text-gray-500">Memuat data...</p>
+            </div>
+          </div>
+        ) : (
+          <OrdersTable
+            orders={filteredOrders}
+            onViewDetail={handleViewDetail}
+          />
+        )}
       </Card>
 
       {/* Create Order Form Modal */}

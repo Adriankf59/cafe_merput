@@ -1,132 +1,236 @@
 // Employees service for Cafe Merah Putih Management System
-// Handles CRUD operations for employees with local storage persistence
+// Handles CRUD operations for employees via API endpoints
 
-import { User } from '../types';
-import { mockUsers } from '../data/mockData';
+import { User, UserRole, UserStatus } from '../types';
+import { getAuthToken } from './auth';
 
-const STORAGE_KEY = 'cafe_merah_putih_employees';
-
-// Initialize employees from local storage or mock data
-function initializeEmployees(): User[] {
-  if (typeof window === 'undefined') return mockUsers;
-  
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored) {
-    const employees = JSON.parse(stored);
-    return employees.map((e: User) => ({
-      ...e,
-      createdAt: new Date(e.createdAt),
-    }));
+// Helper to get auth headers
+function getHeaders(): HeadersInit {
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
+  const token = getAuthToken();
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
   }
-  
-  // Initialize with mock data
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(mockUsers));
-  return mockUsers;
+  return headers;
 }
 
-// Save employees to local storage
-function saveEmployees(employees: User[]): void {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(employees));
+// Map API role name to UserRole
+function mapRoleName(roleName: string): UserRole {
+  const mapping: Record<string, UserRole> = {
+    'Kasir': 'Kasir',
+    'Barista': 'Barista',
+    'Manager': 'Manager',
+    'Admin': 'Manager', // Map Admin to Manager for compatibility
+  };
+  return mapping[roleName] || 'Kasir';
+}
+
+// Map API response to User type
+function mapApiEmployee(apiEmployee: Record<string, unknown>): User {
+  return {
+    id: apiEmployee.user_id as string,
+    name: apiEmployee.username as string,
+    email: apiEmployee.email as string,
+    phone: (apiEmployee.phone as string) || '',
+    role: mapRoleName(apiEmployee.role_name as string || apiEmployee.nama_role as string || 'Kasir'),
+    status: (apiEmployee.status as UserStatus) || 'Aktif',
+    createdAt: new Date(apiEmployee.created_at as string),
+  };
 }
 
 // Get all employees
-export function getEmployees(): User[] {
-  return initializeEmployees();
+export async function getEmployees(search?: string): Promise<User[]> {
+  try {
+    const params = new URLSearchParams();
+    if (search) params.append('search', search);
+    
+    const url = `/api/employees${params.toString() ? `?${params.toString()}` : ''}`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: getHeaders(),
+    });
+
+    const data = await response.json();
+    
+    if (!response.ok || !data.success) {
+      console.error('Failed to fetch employees:', data.error);
+      return [];
+    }
+
+    return data.data.map(mapApiEmployee);
+  } catch (error) {
+    console.error('Error fetching employees:', error);
+    return [];
+  }
 }
 
 // Get employee by ID
-export function getEmployeeById(id: string): User | undefined {
-  const employees = initializeEmployees();
-  return employees.find((e) => e.id === id);
+export async function getEmployeeById(id: string): Promise<User | undefined> {
+  try {
+    const response = await fetch(`/api/employees/${id}`, {
+      method: 'GET',
+      headers: getHeaders(),
+    });
+
+    const data = await response.json();
+    
+    if (!response.ok || !data.success) {
+      return undefined;
+    }
+
+    return mapApiEmployee(data.data);
+  } catch (error) {
+    console.error('Error fetching employee:', error);
+    return undefined;
+  }
 }
 
-// Get employee by email
-export function getEmployeeByEmail(email: string): User | undefined {
-  const employees = initializeEmployees();
+// Get employee by email (fetch all and filter client-side)
+export async function getEmployeeByEmail(email: string): Promise<User | undefined> {
+  const employees = await getEmployees();
   return employees.find((e) => e.email.toLowerCase() === email.toLowerCase());
 }
 
-// Search employees by name (case-insensitive)
+// Search employees by name (client-side filtering for already fetched employees)
 export function searchEmployees(employees: User[], query: string): User[] {
   if (!query.trim()) return employees;
   const lowerQuery = query.toLowerCase();
   return employees.filter((e) => e.name.toLowerCase().includes(lowerQuery));
 }
 
-// Generate new employee ID
-function generateEmployeeId(): string {
-  const employees = initializeEmployees();
-  const maxId = employees.reduce((max, e) => {
-    const num = parseInt(e.id.replace('USR', ''), 10);
-    return num > max ? num : max;
-  }, 0);
-  return `USR${String(maxId + 1).padStart(3, '0')}`;
-}
-
 // Create new employee
-export function createEmployee(
-  data: Omit<User, 'id' | 'createdAt'>
-): User {
-  const employees = initializeEmployees();
-  
-  // Check for duplicate email
-  const existingEmail = employees.find(
-    (e) => e.email.toLowerCase() === data.email.toLowerCase()
-  );
-  if (existingEmail) {
-    throw new Error('Email sudah terdaftar');
+export async function createEmployee(
+  data: Omit<User, 'id' | 'createdAt'> & { password: string }
+): Promise<User | null> {
+  try {
+    // First, get roles to find the role_id
+    const rolesResponse = await fetch('/api/roles', {
+      method: 'GET',
+      headers: getHeaders(),
+    });
+    const rolesData = await rolesResponse.json();
+    
+    let roleId = '';
+    if (rolesData.success && rolesData.data) {
+      const role = rolesData.data.find((r: Record<string, unknown>) => 
+        (r.nama_role as string) === data.role
+      );
+      if (role) {
+        roleId = role.role_id as string;
+      }
+    }
+
+    const response = await fetch('/api/employees', {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({
+        username: data.name,
+        email: data.email,
+        password: data.password,
+        role_id: roleId,
+        status: data.status,
+        phone: data.phone,
+      }),
+    });
+
+    const result = await response.json();
+    
+    if (!response.ok || !result.success) {
+      if (result.error?.includes('email') || result.error?.includes('Email')) {
+        throw new Error('Email sudah terdaftar');
+      }
+      console.error('Failed to create employee:', result.error);
+      return null;
+    }
+
+    return mapApiEmployee(result.data);
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
+    console.error('Error creating employee:', error);
+    return null;
   }
-  
-  const newEmployee: User = {
-    ...data,
-    id: generateEmployeeId(),
-    createdAt: new Date(),
-  };
-  
-  employees.push(newEmployee);
-  saveEmployees(employees);
-  return newEmployee;
 }
 
 // Update existing employee
-export function updateEmployee(
+export async function updateEmployee(
   id: string,
-  data: Partial<Omit<User, 'id' | 'createdAt'>>
-): User | null {
-  const employees = initializeEmployees();
-  const index = employees.findIndex((e) => e.id === id);
-  
-  if (index === -1) return null;
-  
-  // Check for duplicate email (excluding current employee)
-  if (data.email) {
-    const existingEmail = employees.find(
-      (e) => e.email.toLowerCase() === data.email!.toLowerCase() && e.id !== id
-    );
-    if (existingEmail) {
-      throw new Error('Email sudah terdaftar');
+  data: Partial<Omit<User, 'id' | 'createdAt'>> & { password?: string }
+): Promise<User | null> {
+  try {
+    const updateData: Record<string, unknown> = {};
+    
+    if (data.name !== undefined) updateData.username = data.name;
+    if (data.email !== undefined) updateData.email = data.email;
+    if (data.password !== undefined) updateData.password = data.password;
+    if (data.status !== undefined) updateData.status = data.status;
+    if (data.phone !== undefined) updateData.phone = data.phone;
+    
+    // If role is being updated, get the role_id
+    if (data.role !== undefined) {
+      const rolesResponse = await fetch('/api/roles', {
+        method: 'GET',
+        headers: getHeaders(),
+      });
+      const rolesData = await rolesResponse.json();
+      
+      if (rolesData.success && rolesData.data) {
+        const role = rolesData.data.find((r: Record<string, unknown>) => 
+          (r.nama_role as string) === data.role
+        );
+        if (role) {
+          updateData.role_id = role.role_id as string;
+        }
+      }
     }
+
+    const response = await fetch(`/api/employees/${id}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(updateData),
+    });
+
+    const result = await response.json();
+    
+    if (!response.ok || !result.success) {
+      if (result.error?.includes('email') || result.error?.includes('Email')) {
+        throw new Error('Email sudah terdaftar');
+      }
+      console.error('Failed to update employee:', result.error);
+      return null;
+    }
+
+    return mapApiEmployee(result.data);
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
+    console.error('Error updating employee:', error);
+    return null;
   }
-  
-  const updatedEmployee: User = {
-    ...employees[index],
-    ...data,
-  };
-  
-  employees[index] = updatedEmployee;
-  saveEmployees(employees);
-  return updatedEmployee;
 }
 
 // Delete employee
-export function deleteEmployee(id: string): boolean {
-  const employees = initializeEmployees();
-  const index = employees.findIndex((e) => e.id === id);
-  
-  if (index === -1) return false;
-  
-  employees.splice(index, 1);
-  saveEmployees(employees);
-  return true;
+export async function deleteEmployee(id: string): Promise<boolean> {
+  try {
+    const response = await fetch(`/api/employees/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+
+    const result = await response.json();
+    
+    if (!response.ok || !result.success) {
+      console.error('Failed to delete employee:', result.error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error deleting employee:', error);
+    return false;
+  }
 }

@@ -170,3 +170,30 @@ export interface Supplier {
   address: string;
   createdAt: Date;
 }
+
+// ==================== Product Material Composition ====================
+export interface ProductMaterial {
+  productId: string;
+  materialId: string;
+  quantity: number; // Amount of material needed per product
+}
+
+// ==================== Barista Order ====================
+export type BaristaOrderStatus = 'waiting' | 'processing' | 'ready' | 'completed';
+
+export interface BaristaOrderItem {
+  productId: string;
+  productName: string;
+  quantity: number;
+  notes?: string;
+}
+
+export interface BaristaOrder {
+  id: string;
+  orderNumber: string;
+  items: BaristaOrderItem[];
+  status: BaristaOrderStatus;
+  createdAt: Date;
+  cashierId: string;
+  cashierName: string;
+}

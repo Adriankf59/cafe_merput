@@ -1,48 +1,93 @@
 // Orders service for Cafe Merah Putih Management System
-// Handles CRUD operations for material orders (pemesanan bahan) with local storage persistence
+// Handles CRUD operations for material orders (pemesanan bahan) via API endpoints
 
 import { MaterialOrder, MaterialOrderItem, MaterialOrderStatus } from '../types';
-import { mockMaterialOrders, mockSuppliers } from '../data/mockData';
+import { getAuthToken } from './auth';
 
-const STORAGE_KEY = 'cafe_merah_putih_orders';
-
-// Initialize orders from local storage or mock data
-function initializeOrders(): MaterialOrder[] {
-  if (typeof window === 'undefined') return mockMaterialOrders;
-  
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored) {
-    const orders = JSON.parse(stored);
-    return orders.map((o: MaterialOrder) => ({
-      ...o,
-      orderDate: new Date(o.orderDate),
-      createdAt: new Date(o.createdAt),
-    }));
+// Helper to get auth headers
+function getHeaders(): HeadersInit {
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
+  const token = getAuthToken();
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
   }
-  
-  // Initialize with mock data
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(mockMaterialOrders));
-  return mockMaterialOrders;
+  return headers;
 }
 
-// Save orders to local storage
-function saveOrders(orders: MaterialOrder[]): void {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(orders));
+// Map API response to MaterialOrder type
+function mapApiOrder(apiOrder: Record<string, unknown>): MaterialOrder {
+  // Create a single item from the API order (API stores one material per order)
+  const item: MaterialOrderItem = {
+    materialId: apiOrder.bahan_id as string,
+    materialName: apiOrder.nama_bahan as string || '',
+    quantity: Number(apiOrder.jumlah || 0),
+    unit: apiOrder.satuan as string || 'pcs',
+    price: 0, // API doesn't store price per item
+    subtotal: 0,
+  };
+
+  return {
+    id: apiOrder.pengadaan_id as string,
+    supplierId: '',
+    supplierName: apiOrder.nama_bahan as string || 'Supplier', // Use material name as supplier for display
+    items: [item],
+    total: 0, // API doesn't store total
+    status: apiOrder.status as MaterialOrderStatus,
+    orderDate: new Date(apiOrder.tanggal_pesan as string),
+    createdAt: new Date(apiOrder.created_at as string),
+  };
 }
 
 // Get all orders
-export function getOrders(): MaterialOrder[] {
-  return initializeOrders();
+export async function getOrders(search?: string): Promise<MaterialOrder[]> {
+  try {
+    const params = new URLSearchParams();
+    if (search) params.append('search', search);
+    
+    const url = `/api/orders${params.toString() ? `?${params.toString()}` : ''}`;
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: getHeaders(),
+    });
+
+    const data = await response.json();
+    
+    if (!response.ok || !data.success) {
+      console.error('Failed to fetch orders:', data.error);
+      return [];
+    }
+
+    return data.data.map(mapApiOrder);
+  } catch (error) {
+    console.error('Error fetching orders:', error);
+    return [];
+  }
 }
 
 // Get order by ID
-export function getOrderById(id: string): MaterialOrder | undefined {
-  const orders = initializeOrders();
-  return orders.find((o) => o.id === id);
+export async function getOrderById(id: string): Promise<MaterialOrder | undefined> {
+  try {
+    const response = await fetch(`/api/orders/${id}`, {
+      method: 'GET',
+      headers: getHeaders(),
+    });
+
+    const data = await response.json();
+    
+    if (!response.ok || !data.success) {
+      return undefined;
+    }
+
+    return mapApiOrder(data.data);
+  } catch (error) {
+    console.error('Error fetching order:', error);
+    return undefined;
+  }
 }
 
-// Search orders by ID or supplier name (case-insensitive)
+// Search orders by ID or supplier name (client-side filtering for already fetched orders)
 export function searchOrders(orders: MaterialOrder[], query: string): MaterialOrder[] {
   if (!query.trim()) return orders;
   const lowerQuery = query.toLowerCase();
@@ -53,7 +98,7 @@ export function searchOrders(orders: MaterialOrder[], query: string): MaterialOr
   );
 }
 
-// Filter orders by status
+// Filter orders by status (client-side filtering)
 export function filterOrdersByStatus(
   orders: MaterialOrder[],
   status: MaterialOrderStatus | 'Semua'
@@ -62,85 +107,99 @@ export function filterOrdersByStatus(
   return orders.filter((o) => o.status === status);
 }
 
-// Generate new order ID
-function generateOrderId(): string {
-  const orders = initializeOrders();
-  const maxId = orders.reduce((max, o) => {
-    const num = parseInt(o.id.replace('ORD', ''), 10);
-    return num > max ? num : max;
-  }, 0);
-  return `ORD${String(maxId + 1).padStart(3, '0')}`;
-}
-
 // Calculate order total from items
 export function calculateOrderTotal(items: MaterialOrderItem[]): number {
   return items.reduce((sum, item) => sum + item.subtotal, 0);
 }
 
 // Create new order
-export function createOrder(
-  data: Omit<MaterialOrder, 'id' | 'total' | 'createdAt'>
-): MaterialOrder {
-  const orders = initializeOrders();
-  const newOrder: MaterialOrder = {
-    ...data,
-    id: generateOrderId(),
-    total: calculateOrderTotal(data.items),
-    createdAt: new Date(),
-  };
-  
-  orders.push(newOrder);
-  saveOrders(orders);
-  return newOrder;
-}
+export async function createOrder(
+  data: {
+    bahan_id: string;
+    user_id: string;
+    jumlah: number;
+    tanggal_pesan?: Date;
+  }
+): Promise<MaterialOrder | null> {
+  try {
+    const response = await fetch('/api/orders', {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({
+        bahan_id: data.bahan_id,
+        user_id: data.user_id,
+        jumlah: data.jumlah,
+        tanggal_pesan: data.tanggal_pesan?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0],
+      }),
+    });
 
-// Update existing order
-export function updateOrder(
-  id: string,
-  data: Partial<Omit<MaterialOrder, 'id' | 'createdAt'>>
-): MaterialOrder | null {
-  const orders = initializeOrders();
-  const index = orders.findIndex((o) => o.id === id);
-  
-  if (index === -1) return null;
-  
-  const currentOrder = orders[index];
-  const newItems = data.items ?? currentOrder.items;
-  
-  const updatedOrder: MaterialOrder = {
-    ...currentOrder,
-    ...data,
-    total: calculateOrderTotal(newItems),
-  };
-  
-  orders[index] = updatedOrder;
-  saveOrders(orders);
-  return updatedOrder;
+    const result = await response.json();
+    
+    if (!response.ok || !result.success) {
+      console.error('Failed to create order:', result.error);
+      return null;
+    }
+
+    return mapApiOrder(result.data);
+  } catch (error) {
+    console.error('Error creating order:', error);
+    return null;
+  }
 }
 
 // Update order status
-export function updateOrderStatus(
+export async function updateOrderStatus(
   id: string,
-  status: MaterialOrderStatus
-): MaterialOrder | null {
-  return updateOrder(id, { status });
+  status: MaterialOrderStatus,
+  tanggalTerima?: Date
+): Promise<MaterialOrder | null> {
+  try {
+    const updateData: Record<string, unknown> = { status };
+    if (tanggalTerima) {
+      updateData.tanggal_terima = tanggalTerima.toISOString().split('T')[0];
+    }
+
+    const response = await fetch(`/api/orders/${id}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify(updateData),
+    });
+
+    const result = await response.json();
+    
+    if (!response.ok || !result.success) {
+      console.error('Failed to update order status:', result.error);
+      return null;
+    }
+
+    return mapApiOrder(result.data);
+  } catch (error) {
+    console.error('Error updating order status:', error);
+    return null;
+  }
 }
 
-// Delete order
-export function deleteOrder(id: string): boolean {
-  const orders = initializeOrders();
-  const index = orders.findIndex((o) => o.id === id);
-  
-  if (index === -1) return false;
-  
-  orders.splice(index, 1);
-  saveOrders(orders);
-  return true;
+// Update existing order (alias for updateOrderStatus for compatibility)
+export async function updateOrder(
+  id: string,
+  data: Partial<{ status: MaterialOrderStatus; tanggal_terima: Date }>
+): Promise<MaterialOrder | null> {
+  return updateOrderStatus(id, data.status || 'Pending', data.tanggal_terima);
 }
 
-// Get suppliers list
+// Delete order (not supported by API, return false)
+export async function deleteOrder(id: string): Promise<boolean> {
+  console.warn('Delete order not supported by API:', id);
+  return false;
+}
+
+// Get suppliers list (mock data since API doesn't have suppliers endpoint)
 export function getSuppliers() {
-  return mockSuppliers;
+  return [
+    { id: 'SUP001', name: 'PT Kopi Nusantara', contact: '021-1234567', email: 'info@kopinusantara.com', address: 'Jakarta' },
+    { id: 'SUP002', name: 'CV Dairy Fresh', contact: '021-7654321', email: 'order@dairyfresh.com', address: 'Bandung' },
+    { id: 'SUP003', name: 'UD Gula Manis', contact: '021-9876543', email: 'sales@gulamanis.com', address: 'Surabaya' },
+  ];
 }
 
 // Get status badge variant

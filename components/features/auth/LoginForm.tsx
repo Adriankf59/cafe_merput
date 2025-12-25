@@ -8,7 +8,7 @@ import { useAuth } from '@/lib/context/AuthContext';
 
 export function LoginForm() {
   const router = useRouter();
-  const { login } = useAuth();
+  const { login, user } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -22,8 +22,15 @@ export function LoginForm() {
     try {
       const result = await login(email, password);
       
-      if (result.success) {
-        router.push('/dashboard');
+      if (result.success && result.user) {
+        // Redirect based on user role
+        if (result.user.role === 'Barista') {
+          router.push('/barista');
+        } else if (result.user.role === 'Kasir') {
+          router.push('/kasir');
+        } else {
+          router.push('/dashboard');
+        }
       } else {
         setError(result.error || 'Email atau password salah');
       }
