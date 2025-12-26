@@ -307,7 +307,7 @@ Implementasi backend API dengan Next.js API Routes dan MySQL database menggunaka
     - Include default roles dan admin user
     - _Requirements: 1.2_
 
-- [ ] 20. Final checkpoint - Full integration test
+- [x] 20. Final checkpoint - Full integration test
   - Verify semua API endpoints berfungsi
   - Verify frontend terintegrasi dengan backend
   - Verify auth flow complete

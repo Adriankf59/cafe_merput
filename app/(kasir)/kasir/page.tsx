@@ -55,7 +55,11 @@ export default function KasirTransaksiPage() {
 
   const handleProductClick = (product: Product) => {
     if (product.status === 'Tersedia') {
-      setCartItems((prev) => addItemToCart(prev, product));
+      // Verify product exists in current products list before adding to cart
+      const validProduct = products.find(p => p.id === product.id);
+      if (validProduct) {
+        setCartItems((prev) => addItemToCart(prev, validProduct));
+      }
     }
   };
 
@@ -67,12 +71,22 @@ export default function KasirTransaksiPage() {
     setCartItems((prev) => updateItemQuantity(prev, productId, quantity));
   };
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     if (cartItems.length === 0 || !user) return;
 
     try {
       // Create transaction
-      createTransaction(cartItems, user.id, 'Cash');
+      const transaction = await createTransaction(cartItems, user.id, 'Cash');
+      
+      if (!transaction) {
+        // Transaction failed - could be stale product IDs or invalid user after database re-seed
+        // Clear cart and refresh products
+        setCartItems(clearCart());
+        const freshProducts = await getProducts();
+        setProducts(freshProducts);
+        alert('Transaksi gagal. Jika masalah berlanjut, silakan logout dan login kembali.');
+        return;
+      }
       
       // Convert cart items to barista order items
       const baristaItems: BaristaOrderItem[] = cartItems.map((item) => ({
@@ -82,7 +96,7 @@ export default function KasirTransaksiPage() {
       }));
       
       // Send order to barista
-      const order = addOrder(baristaItems, user.id, user.name);
+      const order = await addOrder(baristaItems, user.id, user.name, transaction?.id);
       
       // Clear cart after successful transaction
       setCartItems(clearCart());
@@ -91,7 +105,11 @@ export default function KasirTransaksiPage() {
       alert(`Transaksi berhasil! Pesanan #${order.orderNumber} telah dikirim ke Barista.`);
     } catch (error) {
       console.error('Failed to process transaction:', error);
-      alert('Gagal memproses transaksi');
+      // Clear cart on error to prevent stale data issues
+      setCartItems(clearCart());
+      const freshProducts = await getProducts();
+      setProducts(freshProducts);
+      alert('Gagal memproses transaksi. Silakan logout dan login kembali, lalu pilih produk baru.');
     }
   };
 

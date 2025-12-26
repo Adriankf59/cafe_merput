@@ -118,6 +118,7 @@ export async function createOrder(
     bahan_id: string;
     user_id: string;
     jumlah: number;
+    harga?: number;
     tanggal_pesan?: Date;
   }
 ): Promise<MaterialOrder | null> {
@@ -129,6 +130,7 @@ export async function createOrder(
         bahan_id: data.bahan_id,
         user_id: data.user_id,
         jumlah: data.jumlah,
+        harga: data.harga || 0,
         tanggal_pesan: data.tanggal_pesan?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0],
       }),
     });

@@ -1,6 +1,7 @@
 'use client';
 
-import { Pencil, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { Pencil, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Material } from '@/lib/types';
 import { Table } from '@/components/ui/Table';
 import { Badge } from '@/components/ui/Badge';
@@ -12,7 +13,21 @@ interface MaterialTableProps {
   onDelete: (material: Material) => void;
 }
 
+const ITEMS_PER_PAGE = 10;
+
 export function MaterialTable({ materials, onEdit, onDelete }: MaterialTableProps) {
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const totalPages = Math.ceil(materials.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const currentMaterials = materials.slice(startIndex, endIndex);
+
+  // Reset to page 1 when materials change (e.g., search)
+  if (currentPage > totalPages && totalPages > 0) {
+    setCurrentPage(1);
+  }
+
   const columns = [
     {
       key: 'name',
@@ -87,7 +102,48 @@ export function MaterialTable({ materials, onEdit, onDelete }: MaterialTableProp
     },
   ];
 
-  return <Table columns={columns} data={materials} />;
+  return (
+    <div>
+      <Table columns={columns} data={currentMaterials} />
+      
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between mt-4 pt-4 border-t">
+          <p className="text-sm text-gray-500">
+            Menampilkan {startIndex + 1}-{Math.min(endIndex, materials.length)} dari {materials.length} bahan
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+              <Button
+                key={page}
+                variant={currentPage === page ? 'primary' : 'secondary'}
+                size="sm"
+                onClick={() => setCurrentPage(page)}
+              >
+                {page}
+              </Button>
+            ))}
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default MaterialTable;

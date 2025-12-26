@@ -10,23 +10,26 @@ import {
   Legend,
 } from 'recharts';
 import { Card } from '@/components/ui';
-import { CategorySales } from '@/lib/types';
+
+interface CategorySalesData {
+  jenis_produk: string;
+  percentage: number;
+  total: number;
+}
 
 interface CategorySalesChartProps {
-  data: CategorySales[];
+  data: CategorySalesData[];
 }
 
-interface ChartData {
-  category: string;
-  percentage: number;
-  color: string;
-  [key: string]: string | number;
-}
+const COLORS = ['#DC2626', '#F87171', '#FCA5A5'];
 
 export function CategorySalesChart({ data }: CategorySalesChartProps) {
-  // Transform data to include index signature for recharts compatibility
-  const chartData: ChartData[] = data.map(item => ({
-    ...item,
+  // Transform data for chart
+  const chartData = data.map((item, index) => ({
+    category: item.jenis_produk,
+    percentage: Math.round(item.percentage * 10) / 10,
+    total: item.total,
+    color: COLORS[index % COLORS.length],
   }));
 
   return (
@@ -39,10 +42,10 @@ export function CategorySalesChart({ data }: CategorySalesChartProps) {
           <PieChart>
             <Pie
               data={chartData}
-              cx="50%"
+              cx="55%"
               cy="50%"
-              innerRadius={60}
-              outerRadius={100}
+              innerRadius={50}
+              outerRadius={80}
               paddingAngle={2}
               dataKey="percentage"
               nameKey="category"
@@ -64,6 +67,7 @@ export function CategorySalesChart({ data }: CategorySalesChartProps) {
               layout="vertical"
               align="right"
               verticalAlign="middle"
+              wrapperStyle={{ paddingLeft: '30px' }}
               formatter={(value) => {
                 const item = chartData.find(d => d.category === value);
                 return (

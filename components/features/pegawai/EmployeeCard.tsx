@@ -60,7 +60,7 @@ export function EmployeeCard({ employee, onEdit, onDelete }: EmployeeCardProps) 
           </div>
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <Phone className="w-4 h-4 text-gray-400" />
-            <span>{employee.phone}</span>
+            <span>{employee.phone || '-'}</span>
           </div>
         </div>
 

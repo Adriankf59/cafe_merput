@@ -19,6 +19,10 @@ export const createEmployeeSchema = z.object({
     .min(1, 'Email wajib diisi')
     .email('Format email tidak valid')
     .max(100, 'Email maksimal 100 karakter'),
+  phone: z
+    .string()
+    .max(20, 'Nomor telepon maksimal 20 karakter')
+    .optional(),
   password: z
     .string({ message: 'Password wajib diisi' })
     .min(6, 'Password minimal 6 karakter'),
@@ -42,6 +46,10 @@ export const updateEmployeeSchema = z.object({
     .string()
     .email('Format email tidak valid')
     .max(100, 'Email maksimal 100 karakter')
+    .optional(),
+  phone: z
+    .string()
+    .max(20, 'Nomor telepon maksimal 20 karakter')
     .optional(),
   password: z
     .string()

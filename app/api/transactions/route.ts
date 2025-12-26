@@ -75,11 +75,16 @@ export async function POST(request: NextRequest) {
     // Handle specific errors
     if (error instanceof Error) {
       if (error.message.includes('Product not found')) {
-        return errorResponse('Produk tidak ditemukan', 404);
+        return errorResponse('Produk tidak ditemukan. Silakan refresh halaman dan pilih produk kembali.', 404);
       }
       if (error.message.includes('Insufficient stock')) {
         return errorResponse(error.message, 400);
       }
+      if (error.message.includes('foreign key') || error.message.includes('user_id')) {
+        return errorResponse('User tidak valid. Silakan logout dan login kembali.', 400);
+      }
+      // Return the actual error message for debugging
+      return errorResponse(`Gagal membuat transaksi: ${error.message}`, 500);
     }
     
     return serverErrorResponse('Gagal membuat transaksi');

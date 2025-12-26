@@ -20,6 +20,7 @@ export function OrderForm({ isOpen, onClose, onSubmit }: OrderFormProps) {
   const [materials, setMaterials] = useState<Material[]>([]);
   const [selectedMaterial, setSelectedMaterial] = useState('');
   const [jumlah, setJumlah] = useState('');
+  const [harga, setHarga] = useState('');
   const [tanggalPesan, setTanggalPesan] = useState(new Date().toISOString().split('T')[0]);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -55,6 +56,10 @@ export function OrderForm({ isOpen, onClose, onSubmit }: OrderFormProps) {
       newErrors.jumlah = 'Jumlah harus lebih dari 0';
     }
 
+    if (!harga || Number(harga) <= 0) {
+      newErrors.harga = 'Harga harus lebih dari 0';
+    }
+
     if (!tanggalPesan) {
       newErrors.tanggalPesan = 'Tanggal pesanan wajib diisi';
     }
@@ -74,12 +79,14 @@ export function OrderForm({ isOpen, onClose, onSubmit }: OrderFormProps) {
         bahan_id: selectedMaterial,
         user_id: user.id,
         jumlah: Number(jumlah),
+        harga: Number(harga),
         tanggal_pesan: new Date(tanggalPesan),
       });
 
       if (result) {
         // Reset form
         setJumlah('');
+        setHarga('');
         setTanggalPesan(new Date().toISOString().split('T')[0]);
         onSubmit();
         onClose();
@@ -97,6 +104,7 @@ export function OrderForm({ isOpen, onClose, onSubmit }: OrderFormProps) {
   const handleClose = () => {
     setErrors({});
     setJumlah('');
+    setHarga('');
     onClose();
   };
 
@@ -164,14 +172,27 @@ export function OrderForm({ isOpen, onClose, onSubmit }: OrderFormProps) {
           </div>
           <div>
             <Input
-              label="Tanggal Pesanan"
-              type="date"
-              value={tanggalPesan}
-              onChange={(e) => setTanggalPesan(e.target.value)}
-              error={errors.tanggalPesan}
+              label="Harga Total (Rp)"
+              type="number"
+              value={harga}
+              onChange={(e) => setHarga(e.target.value)}
+              placeholder="Masukkan harga"
+              min="0"
+              error={errors.harga}
               disabled={isLoading}
             />
           </div>
+        </div>
+
+        <div>
+          <Input
+            label="Tanggal Pesanan"
+            type="date"
+            value={tanggalPesan}
+            onChange={(e) => setTanggalPesan(e.target.value)}
+            error={errors.tanggalPesan}
+            disabled={isLoading}
+          />
         </div>
 
         <div className="flex justify-end gap-3 pt-4 border-t">

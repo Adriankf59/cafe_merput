@@ -27,6 +27,7 @@ const users = [
     username: 'Admin User',
     email: 'admin@cafemerahputih.com',
     password: 'admin123',
+    phone: '081234567890',
     role: 'Admin',
     status: 'Aktif' as const,
   },
@@ -34,6 +35,7 @@ const users = [
     username: 'Manajer User',
     email: 'manajer@cafemerahputih.com',
     password: 'manajer123',
+    phone: '081234567891',
     role: 'Manager',
     status: 'Aktif' as const,
   },
@@ -41,6 +43,7 @@ const users = [
     username: 'Kasir User',
     email: 'kasir@cafemerahputih.com',
     password: 'kasir123',
+    phone: '081234567892',
     role: 'Kasir',
     status: 'Aktif' as const,
   },
@@ -48,6 +51,7 @@ const users = [
     username: 'Barista User',
     email: 'barista@cafemerahputih.com',
     password: 'barista123',
+    phone: '081234567893',
     role: 'Barista',
     status: 'Aktif' as const,
   },
@@ -55,6 +59,7 @@ const users = [
     username: 'Pengadaan User',
     email: 'pengadaan@cafemerahputih.com',
     password: 'pengadaan123',
+    phone: '081234567894',
     role: 'Pengadaan',
     status: 'Aktif' as const,
   },
@@ -205,8 +210,8 @@ async function seedUsers(roleMap: Map<string, string>): Promise<Map<string, stri
     const hashedPassword = await hashPassword(user.password);
     
     await execute(
-      'INSERT INTO users (user_id, username, password, email, role_id, status) VALUES (?, ?, ?, ?, ?, ?)',
-      [userId, user.username, hashedPassword, user.email, roleId, user.status]
+      'INSERT INTO users (user_id, username, password, email, phone, role_id, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [userId, user.username, hashedPassword, user.email, user.phone || null, roleId, user.status]
     );
     
     userMap.set(user.email, userId);
@@ -281,7 +286,7 @@ async function seedSampleTransactions(
   userMap: Map<string, string>,
   productMap: Map<string, string>
 ): Promise<void> {
-  console.log('Seeding sample transactions...');
+  console.log('Seeding sample transactions (6 months history)...');
   
   const kasirId = userMap.get('kasir@cafemerahputih.com');
   if (!kasirId) {
@@ -289,117 +294,108 @@ async function seedSampleTransactions(
     return;
   }
   
-  // Create sample transactions for the past 7 days
-  const sampleTransactions = [
-    {
-      items: [
-        { product: 'Cappuccino', jumlah: 2 },
-        { product: 'Croissant', jumlah: 1 },
-      ],
-      daysAgo: 0,
-    },
-    {
-      items: [
-        { product: 'Latte', jumlah: 1 },
-        { product: 'Cheesecake', jumlah: 1 },
-      ],
-      daysAgo: 0,
-    },
-    {
-      items: [
-        { product: 'Americano', jumlah: 3 },
-        { product: 'Sandwich', jumlah: 2 },
-      ],
-      daysAgo: 1,
-    },
-    {
-      items: [
-        { product: 'Mocha', jumlah: 2 },
-        { product: 'Green Tea Latte', jumlah: 1 },
-      ],
-      daysAgo: 1,
-    },
-    {
-      items: [
-        { product: 'Espresso', jumlah: 4 },
-      ],
-      daysAgo: 2,
-    },
-    {
-      items: [
-        { product: 'Caramel Macchiato', jumlah: 2 },
-        { product: 'Chocolate', jumlah: 2 },
-      ],
-      daysAgo: 2,
-    },
-    {
-      items: [
-        { product: 'Lemon Tea', jumlah: 3 },
-        { product: 'Croissant', jumlah: 3 },
-      ],
-      daysAgo: 3,
-    },
-    {
-      items: [
-        { product: 'Cappuccino', jumlah: 1 },
-        { product: 'Latte', jumlah: 1 },
-        { product: 'Cheesecake', jumlah: 2 },
-      ],
-      daysAgo: 4,
-    },
-    {
-      items: [
-        { product: 'Americano', jumlah: 2 },
-        { product: 'Sandwich', jumlah: 1 },
-      ],
-      daysAgo: 5,
-    },
-    {
-      items: [
-        { product: 'Green Tea Latte', jumlah: 2 },
-        { product: 'Mocha', jumlah: 1 },
-      ],
-      daysAgo: 6,
-    },
-  ];
-  
   // Get product prices
   const productPrices = new Map<string, number>();
   for (const p of products) {
     productPrices.set(p.nama_produk, p.harga);
   }
+
+  const productNames = products.map(p => p.nama_produk);
   
+  // Generate transactions for the past 6 months
   let transactionCount = 0;
-  for (const tx of sampleTransactions) {
-    const transactionId = uuidv4();
+  const today = new Date();
+  
+  for (let monthsAgo = 5; monthsAgo >= 0; monthsAgo--) {
+    // Generate 20-40 transactions per month (more recent months have more)
+    const txPerMonth = 20 + (5 - monthsAgo) * 5 + Math.floor(Math.random() * 10);
     
-    // Calculate total
+    for (let i = 0; i < txPerMonth; i++) {
+      const transactionId = uuidv4();
+      
+      // Random date within the month
+      const txDate = new Date(today);
+      txDate.setMonth(txDate.getMonth() - monthsAgo);
+      txDate.setDate(Math.floor(Math.random() * 28) + 1);
+      txDate.setHours(Math.floor(Math.random() * 12) + 8);
+      
+      // Random items (1-4 items per transaction)
+      const numItems = Math.floor(Math.random() * 4) + 1;
+      const items: { product: string; jumlah: number }[] = [];
+      const usedProducts = new Set<string>();
+      
+      for (let j = 0; j < numItems; j++) {
+        let product: string;
+        do {
+          product = productNames[Math.floor(Math.random() * productNames.length)];
+        } while (usedProducts.has(product));
+        usedProducts.add(product);
+        
+        items.push({
+          product,
+          jumlah: Math.floor(Math.random() * 3) + 1,
+        });
+      }
+      
+      // Calculate total
+      let totalHarga = 0;
+      for (const item of items) {
+        const price = productPrices.get(item.product) || 0;
+        totalHarga += price * item.jumlah;
+      }
+      
+      // Insert transaction
+      await execute(
+        'INSERT INTO transactions (transaksi_id, user_id, tanggal, total_harga) VALUES (?, ?, ?, ?)',
+        [transactionId, kasirId, txDate, totalHarga]
+      );
+      
+      // Insert transaction items
+      for (const item of items) {
+        const productId = productMap.get(item.product);
+        const price = productPrices.get(item.product) || 0;
+        
+        if (!productId) continue;
+        
+        const detailId = uuidv4();
+        await execute(
+          'INSERT INTO transaction_items (detail_id, transaksi_id, produk_id, jumlah, harga_satuan) VALUES (?, ?, ?, ?, ?)',
+          [detailId, transactionId, productId, item.jumlah, price]
+        );
+      }
+      
+      transactionCount++;
+    }
+  }
+  
+  // Add some transactions for today
+  const todayTransactions = [
+    { items: [{ product: 'Cappuccino', jumlah: 2 }, { product: 'Croissant', jumlah: 1 }] },
+    { items: [{ product: 'Latte', jumlah: 1 }, { product: 'Cheesecake', jumlah: 1 }] },
+    { items: [{ product: 'Americano', jumlah: 3 }, { product: 'Sandwich', jumlah: 2 }] },
+  ];
+  
+  for (const tx of todayTransactions) {
+    const transactionId = uuidv4();
     let totalHarga = 0;
+    
     for (const item of tx.items) {
       const price = productPrices.get(item.product) || 0;
       totalHarga += price * item.jumlah;
     }
     
-    // Calculate date
     const txDate = new Date();
-    txDate.setDate(txDate.getDate() - tx.daysAgo);
-    txDate.setHours(Math.floor(Math.random() * 12) + 8); // Random hour between 8-20
+    txDate.setHours(Math.floor(Math.random() * 8) + 8);
     
-    // Insert transaction
     await execute(
       'INSERT INTO transactions (transaksi_id, user_id, tanggal, total_harga) VALUES (?, ?, ?, ?)',
       [transactionId, kasirId, txDate, totalHarga]
     );
     
-    // Insert transaction items
     for (const item of tx.items) {
       const productId = productMap.get(item.product);
       const price = productPrices.get(item.product) || 0;
-      
-      if (!productId) {
-        console.error(`Product not found: ${item.product}`);
-        continue;
-      }
+      if (!productId) continue;
       
       const detailId = uuidv4();
       await execute(
@@ -407,7 +403,6 @@ async function seedSampleTransactions(
         [detailId, transactionId, productId, item.jumlah, price]
       );
     }
-    
     transactionCount++;
   }
   
@@ -419,44 +414,106 @@ async function seedSampleMaterialOrders(
   userMap: Map<string, string>,
   materialMap: Map<string, string>
 ): Promise<void> {
-  console.log('Seeding sample material orders...');
+  console.log('Seeding sample material orders (6 months history)...');
   
   const managerId = userMap.get('manajer@cafemerahputih.com');
-  if (!managerId) {
-    console.error('Manager user not found, skipping material orders.');
+  const pengadaanId = userMap.get('pengadaan@cafemerahputih.com');
+  
+  if (!managerId || !pengadaanId) {
+    console.error('Manager or Pengadaan user not found, skipping material orders.');
     return;
   }
   
-  const sampleOrders = [
-    { material: 'Biji Kopi Arabica', jumlah: 20, status: 'Diterima', daysAgo: 10 },
-    { material: 'Susu Full Cream', jumlah: 50, status: 'Diterima', daysAgo: 7 },
-    { material: 'Bubuk Coklat', jumlah: 10, status: 'Dikirim', daysAgo: 3 },
-    { material: 'Sirup Caramel', jumlah: 5, status: 'Pending', daysAgo: 1 },
-    { material: 'Matcha Powder', jumlah: 5, status: 'Pending', daysAgo: 0 },
-  ];
+  const materialNames = materials.map(m => m.nama_bahan);
+  const materialPrices: Record<string, number> = {
+    'Biji Kopi Arabica': 150000,
+    'Biji Kopi Robusta': 100000,
+    'Susu Full Cream': 25000,
+    'Susu Oat': 45000,
+    'Gula Pasir': 15000,
+    'Sirup Caramel': 85000,
+    'Sirup Vanilla': 80000,
+    'Bubuk Coklat': 75000,
+    'Matcha Powder': 200000,
+    'Teh Hitam': 50000,
+    'Lemon': 5000,
+    'Butter': 120000,
+    'Tepung Terigu': 12000,
+    'Cream Cheese': 180000,
+    'Roti Tawar': 15000,
+  };
   
   let orderCount = 0;
-  for (const order of sampleOrders) {
-    const materialId = materialMap.get(order.material);
+  const today = new Date();
+  
+  // Generate orders for the past 6 months
+  for (let monthsAgo = 5; monthsAgo >= 0; monthsAgo--) {
+    // 3-6 orders per month
+    const ordersPerMonth = Math.floor(Math.random() * 4) + 3;
     
-    if (!materialId) {
-      console.error(`Material not found: ${order.material}`);
-      continue;
+    for (let i = 0; i < ordersPerMonth; i++) {
+      const orderId = uuidv4();
+      const material = materialNames[Math.floor(Math.random() * materialNames.length)];
+      const materialId = materialMap.get(material);
+      
+      if (!materialId) continue;
+      
+      const orderDate = new Date(today);
+      orderDate.setMonth(orderDate.getMonth() - monthsAgo);
+      orderDate.setDate(Math.floor(Math.random() * 28) + 1);
+      
+      const jumlah = Math.floor(Math.random() * 20) + 5;
+      const harga = (materialPrices[material] || 50000) * jumlah;
+      
+      // Older orders are more likely to be received
+      let status: 'Pending' | 'Dikirim' | 'Diterima';
+      let receiveDate: Date | null = null;
+      
+      if (monthsAgo >= 1) {
+        status = 'Diterima';
+        receiveDate = new Date(orderDate);
+        receiveDate.setDate(receiveDate.getDate() + Math.floor(Math.random() * 5) + 2);
+      } else if (monthsAgo === 0 && Math.random() > 0.5) {
+        status = 'Diterima';
+        receiveDate = new Date(orderDate);
+        receiveDate.setDate(receiveDate.getDate() + Math.floor(Math.random() * 5) + 2);
+      } else if (Math.random() > 0.5) {
+        status = 'Dikirim';
+      } else {
+        status = 'Pending';
+      }
+      
+      const userId = Math.random() > 0.5 ? managerId : pengadaanId;
+      
+      await execute(
+        'INSERT INTO material_orders (pengadaan_id, bahan_id, user_id, jumlah, harga, tanggal_pesan, tanggal_terima, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        [orderId, materialId, userId, jumlah, harga, orderDate, receiveDate, status]
+      );
+      
+      orderCount++;
     }
+  }
+  
+  // Add some recent pending orders
+  const recentOrders = [
+    { material: 'Biji Kopi Arabica', jumlah: 20, status: 'Dikirim' as const, daysAgo: 3 },
+    { material: 'Susu Full Cream', jumlah: 50, status: 'Pending' as const, daysAgo: 1 },
+    { material: 'Matcha Powder', jumlah: 5, status: 'Pending' as const, daysAgo: 0 },
+  ];
+  
+  for (const order of recentOrders) {
+    const materialId = materialMap.get(order.material);
+    if (!materialId) continue;
     
     const orderId = uuidv4();
     const orderDate = new Date();
     orderDate.setDate(orderDate.getDate() - order.daysAgo);
     
-    let receiveDate: Date | null = null;
-    if (order.status === 'Diterima') {
-      receiveDate = new Date();
-      receiveDate.setDate(receiveDate.getDate() - order.daysAgo + 2); // Received 2 days after order
-    }
+    const harga = (materialPrices[order.material] || 50000) * order.jumlah;
     
     await execute(
-      'INSERT INTO material_orders (pengadaan_id, bahan_id, user_id, jumlah, tanggal_pesan, tanggal_terima, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [orderId, materialId, managerId, order.jumlah, orderDate, receiveDate, order.status]
+      'INSERT INTO material_orders (pengadaan_id, bahan_id, user_id, jumlah, harga, tanggal_pesan, tanggal_terima, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [orderId, materialId, pengadaanId, order.jumlah, harga, orderDate, null, order.status]
     );
     
     orderCount++;

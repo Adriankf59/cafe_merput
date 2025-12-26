@@ -133,8 +133,14 @@ export interface WeeklySales {
 }
 
 export interface TopProduct {
-  name: string;
-  sold: number;
+  name?: string;
+  sold?: number;
+  // API format
+  produk_id?: string;
+  nama_produk?: string;
+  jenis_produk?: string;
+  totalSold?: number;
+  revenue?: number;
 }
 
 // ==================== Report Data ====================

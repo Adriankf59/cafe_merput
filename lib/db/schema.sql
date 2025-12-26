@@ -72,6 +72,7 @@ CREATE TABLE material_orders (
   bahan_id VARCHAR(36) NOT NULL,
   user_id VARCHAR(36) NOT NULL,
   jumlah DECIMAL(10, 2) NOT NULL,
+  harga DECIMAL(12, 2) DEFAULT 0,
   tanggal_pesan DATE NOT NULL,
   tanggal_terima DATE,
   status ENUM('Pending', 'Dikirim', 'Diterima') DEFAULT 'Pending',

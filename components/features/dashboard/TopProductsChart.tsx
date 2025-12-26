@@ -20,7 +20,17 @@ interface TopProductsChartProps {
 
 const COLORS = ['#DC2626', '#EF4444', '#F87171', '#FCA5A5', '#FECACA'];
 
+// Transform data to use 'name' and 'sold' for chart
+function transformData(data: TopProduct[]) {
+  return data.map(item => ({
+    name: item.nama_produk || item.name,
+    sold: item.totalSold || item.sold,
+  }));
+}
+
 export function TopProductsChart({ data }: TopProductsChartProps) {
+  const chartData = transformData(data);
+  
   return (
     <Card className="p-6">
       <h3 className="text-lg font-semibold text-gray-900 mb-4">
@@ -29,7 +39,7 @@ export function TopProductsChart({ data }: TopProductsChartProps) {
       <div className="h-[300px]">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
-            data={data}
+            data={chartData}
             layout="vertical"
             margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
           >
@@ -58,7 +68,7 @@ export function TopProductsChart({ data }: TopProductsChartProps) {
               }}
             />
             <Bar dataKey="sold" radius={[0, 4, 4, 0]}>
-              {data.map((_, index) => (
+              {chartData.map((_, index) => (
                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
               ))}
             </Bar>

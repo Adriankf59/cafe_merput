@@ -56,6 +56,7 @@ export async function POST(request: NextRequest) {
     const employee = await usersQuery.create({
       ...validation.data,
       password: hashedPassword,
+      phone: validation.data.phone,
     });
 
     return createdResponse(employee, 'Pegawai berhasil dibuat');

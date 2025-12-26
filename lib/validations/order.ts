@@ -19,6 +19,10 @@ export const createOrderSchema = z.object({
   jumlah: z
     .number({ message: 'Jumlah wajib diisi' })
     .positive('Jumlah harus lebih dari 0'),
+  harga: z
+    .number({ message: 'Harga wajib diisi' })
+    .min(0, 'Harga tidak boleh negatif')
+    .optional(),
   tanggal_pesan: z
     .string({ message: 'Tanggal pesan wajib diisi' })
     .refine((val) => !isNaN(Date.parse(val)), 'Format tanggal tidak valid'),

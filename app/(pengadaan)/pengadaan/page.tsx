@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card } from '@/components/ui';
-import { Boxes, Package, AlertTriangle, TrendingUp } from 'lucide-react';
+import { Card, Button } from '@/components/ui';
+import { Boxes, AlertTriangle, TrendingUp, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getMaterials, getLowStockMaterials } from '@/lib/services/materials';
 import { Material } from '@/lib/types';
 
@@ -14,10 +14,13 @@ interface DashboardStat {
   bgColor: string;
 }
 
+const ITEMS_PER_PAGE = 10;
+
 export default function PengadaanDashboardPage() {
   const [materials, setMaterials] = useState<Material[]>([]);
   const [lowStockMaterials, setLowStockMaterials] = useState<Material[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     async function fetchData() {
@@ -37,6 +40,11 @@ export default function PengadaanDashboardPage() {
     }
     fetchData();
   }, []);
+
+  const totalPages = Math.ceil(materials.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const currentMaterials = materials.slice(startIndex, endIndex);
 
   const stats: DashboardStat[] = [
     {
@@ -125,13 +133,23 @@ export default function PengadaanDashboardPage() {
         </Card>
       )}
 
-      {/* Recent Materials */}
+      {/* Materials Table with Pagination */}
       <Card className="p-4">
-        <h3 className="font-semibold text-gray-900 mb-4">Daftar Bahan Baku</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold text-gray-900">Daftar Bahan Baku</h3>
+          {totalPages > 1 && (
+            <span className="text-sm text-gray-500">
+              Halaman {currentPage} dari {totalPages}
+            </span>
+          )}
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                  No
+                </th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
                   Nama Bahan
                 </th>
@@ -147,8 +165,11 @@ export default function PengadaanDashboardPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {materials.slice(0, 10).map((material) => (
+              {currentMaterials.map((material, index) => (
                 <tr key={material.id}>
+                  <td className="px-4 py-3 text-sm text-gray-500">
+                    {startIndex + index + 1}
+                  </td>
                   <td className="px-4 py-3 text-sm text-gray-900">{material.name}</td>
                   <td className="px-4 py-3 text-sm text-gray-600">
                     {material.stock} {material.unit}
@@ -172,6 +193,43 @@ export default function PengadaanDashboardPage() {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between mt-4 pt-4 border-t">
+            <p className="text-sm text-gray-500">
+              Menampilkan {startIndex + 1}-{Math.min(endIndex, materials.length)} dari {materials.length} bahan
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                <Button
+                  key={page}
+                  variant={currentPage === page ? 'primary' : 'secondary'}
+                  size="sm"
+                  onClick={() => setCurrentPage(page)}
+                >
+                  {page}
+                </Button>
+              ))}
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
       </Card>
     </div>
   );

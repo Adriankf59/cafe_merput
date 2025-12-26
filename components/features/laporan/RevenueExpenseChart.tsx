@@ -12,10 +12,15 @@ import {
   Legend,
 } from 'recharts';
 import { Card } from '@/components/ui';
-import { MonthlyData } from '@/lib/types';
+
+interface RevenueExpenseData {
+  month: string;
+  revenue: number;
+  expense: number;
+}
 
 interface RevenueExpenseChartProps {
-  data: MonthlyData[];
+  data: RevenueExpenseData[];
 }
 
 function formatCurrency(value: number): string {
@@ -87,7 +92,7 @@ export function RevenueExpenseChart({ data }: RevenueExpenseChartProps) {
             />
             <Line
               type="monotone"
-              dataKey="expenses"
+              dataKey="expense"
               stroke="#6B7280"
               strokeWidth={2}
               dot={{ fill: '#6B7280', strokeWidth: 2, r: 4 }}

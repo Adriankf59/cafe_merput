@@ -54,6 +54,7 @@ export async function POST(request: NextRequest) {
       bahan_id: validation.data.bahan_id,
       user_id: validation.data.user_id,
       jumlah: validation.data.jumlah,
+      harga: validation.data.harga,
       tanggal_pesan: new Date(validation.data.tanggal_pesan),
     });
 
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest) {
     // Handle specific errors
     if (error instanceof Error) {
       if (error.message.includes('foreign key constraint')) {
-        return errorResponse('Bahan atau user tidak ditemukan', 400);
+        return errorResponse('Sesi login tidak valid. Silakan logout dan login kembali.', 401);
       }
     }
 

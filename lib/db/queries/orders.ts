@@ -8,6 +8,7 @@ export interface MaterialOrder {
   bahan_id: string;
   user_id: string;
   jumlah: number;
+  harga: number;
   tanggal_pesan: Date;
   tanggal_terima: Date | null;
   status: 'Pending' | 'Dikirim' | 'Diterima';
@@ -30,6 +31,7 @@ export interface CreateMaterialOrderDTO {
   bahan_id: string;
   user_id: string;
   jumlah: number;
+  harga?: number;
   tanggal_pesan?: Date;
 }
 
@@ -83,14 +85,15 @@ export async function getById(id: string): Promise<MaterialOrderWithDetails | nu
 export async function create(data: CreateMaterialOrderDTO): Promise<MaterialOrderWithDetails> {
   const id = uuidv4();
   const sql = `
-    INSERT INTO material_orders (pengadaan_id, bahan_id, user_id, jumlah, tanggal_pesan)
-    VALUES (?, ?, ?, ?, ?)
+    INSERT INTO material_orders (pengadaan_id, bahan_id, user_id, jumlah, harga, tanggal_pesan)
+    VALUES (?, ?, ?, ?, ?, ?)
   `;
   await execute(sql, [
     id,
     data.bahan_id,
     data.user_id,
     data.jumlah,
+    data.harga || 0,
     data.tanggal_pesan || new Date()
   ]);
 

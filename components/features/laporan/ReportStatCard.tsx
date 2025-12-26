@@ -9,7 +9,7 @@ interface ReportStatCardProps {
   iconBgColor: string;
   title: string;
   value: string;
-  change: number;
+  change?: number;
   changeLabel: string;
 }
 
@@ -21,7 +21,8 @@ export function ReportStatCard({
   change,
   changeLabel,
 }: ReportStatCardProps) {
-  const isPositive = change >= 0;
+  const isPositive = change !== undefined ? change >= 0 : true;
+  const showChange = change !== undefined;
 
   return (
     <Card className="p-6">
@@ -29,14 +30,16 @@ export function ReportStatCard({
         <div className={`p-3 rounded-lg ${iconBgColor}`}>
           {icon}
         </div>
-        <div className={`flex items-center gap-1 text-sm ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
-          {isPositive ? (
-            <TrendingUp className="w-4 h-4" />
-          ) : (
-            <TrendingDown className="w-4 h-4" />
-          )}
-          <span>{isPositive ? '+' : ''}{change}%</span>
-        </div>
+        {showChange && (
+          <div className={`flex items-center gap-1 text-sm ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+            {isPositive ? (
+              <TrendingUp className="w-4 h-4" />
+            ) : (
+              <TrendingDown className="w-4 h-4" />
+            )}
+            <span>{isPositive ? '+' : ''}{change}%</span>
+          </div>
+        )}
       </div>
       <div className="mt-4">
         <h3 className="text-2xl font-bold text-gray-900">{value}</h3>
